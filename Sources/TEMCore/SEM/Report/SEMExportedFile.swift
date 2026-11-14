@@ -20,8 +20,12 @@ package nonisolated struct SEMExportedFile: Sendable, Equatable {
     /// The settings the room had when it wrote it, in the room's words ("Layer", "IPF-Z").
     package var fields: [SEMSessionField]
     package var methods: [SEMMethod]
-    /// The PNG's bytes, for a picture; nil for a table or a text file.
+    /// The PNG's bytes, for a picture; nil for a table or a text file. The session record keeps a copy no larger than the report draws
+    /// (`SEMSessionRecord.figureSide`), with the picture's own size in `pixelWidth` and `pixelHeight` (#619).
     package var png: Data?
+    /// The written picture's size in pixels, when `png` is a smaller copy of it; nil when `png` is the picture as written.
+    package var pixelWidth: Int?
+    package var pixelHeight: Int?
     /// Where it was written; nil until the panel says.
     package var file: URL?
     /// When it was written; nil until then.

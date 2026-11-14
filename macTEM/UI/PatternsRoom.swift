@@ -95,7 +95,9 @@ struct PatternsRoom: View {
             case .success(let url):
                 appState.statusText = "Exported \(url.lastPathComponent)"
                 state.didWrite(to: url)
-            case .failure(let error): appState.present(error)
+            case .failure(let error):
+                state.didFinishExport()
+                appState.present(error)
             }
         }
         .accessibilityElement(children: .contain)
@@ -218,7 +220,8 @@ struct ScanMapPane: View {
             ZStack {
                 if session.mapChoice == .mix, let rgba = session.mixRGBA {
                     // The colour mix: packed RGBA through the view's RGBA pipeline (the Display section's colormap and window do not apply).
-                    MetalImageView(pixels: [Float](repeating: 0, count: dataset.scanRows * dataset.scanColumns), width: dataset.scanColumns, height: dataset.scanRows,
+                    // No scalar plane: the RGBA path reads none (#619).
+                    MetalImageView(pixels: [], width: dataset.scanColumns, height: dataset.scanRows,
                                    contentVersion: session.mixVersion, rgba: rgba)
                         .displayTransform(transform)
                         .frame(width: box.width, height: box.height)

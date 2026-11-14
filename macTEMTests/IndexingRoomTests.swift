@@ -171,6 +171,14 @@ nonisolated final class IndexingRoomTests: XCTestCase {
         guard case .success(let blended)? = indexing.simulationOverlay else { return XCTFail("no kinematical overlay") }
         XCTAssertEqual(blended.simulated?.count, indexing.patternShape.rows * indexing.patternShape.columns,
                        "the kinematical simulation on the indexed pattern's detector")
+        // A master pattern per Min d tried is not kept for the session: the earlier one goes (#619). Red before: two held.
+        XCTAssertEqual(indexing.heldOverlayMasters, 1)
+        shared.minDSpacing *= 1.25
+        patterns.setOverlaySettings(shared)
+        _ = indexing.simulationOverlay
+        await indexing.overlayMastersReady().value
+        _ = indexing.simulationOverlay
+        XCTAssertEqual(indexing.heldOverlayMasters, 1, "the master of the earlier Min d is let go")
         shared.kinematical = false
         patterns.setOverlaySettings(shared)
         if let missed = (0..<solutions.count).first(where: { solutions[$0].phase < 0 }) {
