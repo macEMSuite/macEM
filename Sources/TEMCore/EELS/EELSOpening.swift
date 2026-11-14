@@ -173,11 +173,12 @@ package enum EELSOpening {
         case "emd":
             var signals = try VeloxSpectrumImageSignals(path: url.path).signals.filter { $0.signalType == "EELS" }
             guard !signals.isEmpty else { throw EELSOpeningError.notEELS(name) }
-            // FormatoKit's reader hands a Velox file's cubes with their data, so they are sized here, before any is converted to the room's Doubles.
+            // FormatoKit's reader hands a Velox file's cubes with their data, so they are sized here, before any is converted to the room's counts
+            // (sized as Doubles, the most a count takes: integer counts up to 2^24 and float32 cubes are held as Floats, #620).
             let sized = signals.map(\.data.shape).filter { $0.count == 3 }
             let bytes = sized.reduce(0.0) { $0 + Self.estimatedBytes(nx: $1[1], ny: $1[0], channels: $1[2]) }
             if let refusal = memoryRefusal(name: name, cubes: sized.count, bytes: bytes, physicalMemory: physicalMemory) { throw refusal }
-            // Each of the kit's cubes is let go once it is converted, before the next one is: the kit's copy and the Doubles are in memory together
+            // Each of the kit's cubes is let go once it is converted, before the next one is: the kit's copy and the counts are in memory together
             // for one cube at a time, not for all of them.
             let count = signals.count
             for i in 0..<count {
@@ -189,7 +190,7 @@ package enum EELSOpening {
                 guard axis.units == "eV" else { throw EELSOpeningError.unsupportedShape("\(name): the energy axis is in \"\(axis.units)\", not eV.") }
                 if beam == nil, let kv = signal.metadata["Acquisition_instrument.TEM.beam_energy"]?.value.number, kv > 0 { beam = kv }
                 if pixel == nil, signal.axes[1].scale > 0, !signal.axes[1].units.isEmpty { pixel = (signal.axes[1].scale, signal.axes[1].units) }
-                cubes.append(EELSCube(nx: signal.data.shape[1], ny: signal.data.shape[0], channels: signal.data.shape[2], counts: EELSCounts(signal.data.doubles()),
+                cubes.append(EELSCube(nx: signal.data.shape[1], ny: signal.data.shape[0], channels: signal.data.shape[2], counts: EELSCounts(stored: signal.data),
                                       offsetEV: axis.offset, scaleEV: axis.scale, origin: "Velox EMD (EELS stream \(i + 1) of \(count))"))
             }
         case "msa":
