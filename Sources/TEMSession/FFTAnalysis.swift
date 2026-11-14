@@ -15,7 +15,8 @@
 //  filters — each a lane that runs at most one job. A request while its job runs replaces the lane's pending key (the
 //  newest wins); a job's answer is published only if its key still equals the lane's wanted key AND the room still shows
 //  the file (`release()` bumps the lane's generation), otherwise it is dropped; then the pending key, if it is still
-//  wanted and is not what just landed, runs. A running job is never interrupted: "cancel" means its answer is dropped.
+//  wanted and is not what just landed, runs. A newer key never interrupts a running job (its answer is dropped); `release()`
+//  cancels it, and the live work stops at its next stage, so a closed file's pixels go without waiting for its FFT (#618).
 //  Spots are the one FIFO lane: each click is its own job, in order, one at a time. Jobs are Tasks started on the main
 //  actor that await the injected `FFTCompute` closures; the live ones run TEMCore in `@concurrent` functions below.
 //
@@ -292,6 +293,7 @@ private nonisolated enum FFTWork {
         let spacingX: Double, spacingY: Double
         let unitsX: String, unitsY: String
         let source = try prepared(image, key)
+        try Task.checkCancellation()            // the file closed: stop between stages (#618)
         do {                                    // the core's arrays go out of scope here, before the canvases exist
             let spectrum = key.preprocess.isNone ? try PowerSpectrum.compute(image.micrograph, crop: key.crop)
                                                  : try PowerSpectrum.compute(source, crop: nil)
@@ -302,6 +304,7 @@ private nonisolated enum FFTWork {
             unitsX = spectrum.unitsX
             unitsY = spectrum.unitsY
         }
+        try Task.checkCancellation()
         return FFTSpectrumProduct(
             key: key, width: display.width, height: display.height, spacingX: spacingX, spacingY: spacingY,
             unitsX: unitsX, unitsY: unitsY,
@@ -336,7 +339,9 @@ private nonisolated enum FFTWork {
     @concurrent static func maskedInverse(_ image: CalibratedImage, _ key: FFTMaskKey) async throws
         -> FFTMaskedInverseProduct {
         let source = try transformed(image, key.spectrum.crop)
+        try Task.checkCancellation()
         let inverse = try MaskedInverseFFT.compute(source, spots: key.spots)
+        try Task.checkCancellation()
         return FFTMaskedInverseProduct(
             key: key, canvas: canvas(inverse.image.float32Values, width: inverse.width, height: inverse.height, histogram: false),
             imaginaryMax: inverse.imaginaryMax)
@@ -344,7 +349,9 @@ private nonisolated enum FFTWork {
 
     @concurrent static func filter(_ image: CalibratedImage, _ key: FFTFilterKey) async throws -> FFTFilterProduct {
         let source = try transformed(image, key.spectrum.crop)
+        try Task.checkCancellation()
         let result = try HRTEMFilter.filter(source, parameters: key.parameters)
+        try Task.checkCancellation()
         let outputs = try HRTEMFilter.outputs(result, like: source)
         return FFTFilterProduct(
             key: key,
@@ -371,23 +378,27 @@ private final class Lane<Key: Equatable & Sendable, Output: Sendable> {
     private var isRunning = false
     private var pending: Key?
     private var generation = 0
+    /// The job running now, held so `invalidate` can cancel it: it holds the image it was made with.
+    private var task: Task<Void, Never>?
 
     /// Asks for `key`: it runs now if the lane is idle, else it replaces the pending key.
     func request(_ key: Key) {
         if isRunning { pending = key } else { start(key) }
     }
 
-    /// Every answer still to come is dropped, and nothing waits.
+    /// Every answer still to come is dropped, nothing waits, and the running job is cancelled: the live work stops at its next stage
+    /// and lets go of the image. The lane stays busy until it has ended, so two jobs never overlap.
     func invalidate() {
         generation += 1
         pending = nil
+        task?.cancel()
     }
 
     private func start(_ key: Key) {
         guard let job = makeJob(key) else { return }
         isRunning = true
         let ticket = generation
-        Task { [weak self] in
+        task = Task { [weak self] in
             let result = await job()
             self?.finish(key, result, ticket)
         }
@@ -395,6 +406,7 @@ private final class Lane<Key: Equatable & Sendable, Output: Sendable> {
 
     private func finish(_ key: Key, _ result: Result<Output, any Error>, _ ticket: Int) {
         isRunning = false
+        task = nil
         let landed = ticket == generation && wanted() == key
         if landed { land(key, result) }
         guard !isRunning, let next = pending else { return }
@@ -495,6 +507,8 @@ package final class FFTAnalysis {
     @ObservationIgnored private var spotQueue: [FFTSpot.ID] = []
     @ObservationIgnored private var spotRunning: FFTSpot.ID?
     @ObservationIgnored private var spotJobOut = false
+    /// The spot job running now, held so `release` can cancel it (it holds the image).
+    @ObservationIgnored private var spotTask: Task<Void, Never>?
     @ObservationIgnored private var spotGeneration = 0
 
     package init(compute: FFTCompute = .live) {
@@ -746,6 +760,7 @@ package final class FFTAnalysis {
         spectrumLane.invalidate()
         maskLane.invalidate()
         filterLane.invalidate()
+        spotTask?.cancel()
         spotGeneration += 1
         spotQueue = []
         spotRunning = nil
@@ -793,7 +808,7 @@ package final class FFTAnalysis {
             spotRunning = id
             let ticket = spotGeneration
             let compute = self.compute
-            Task { [weak self] in
+            spotTask = Task { [weak self] in
                 let outcome = await compute.spot(image, spot.spectrumKey, spot.row, spot.col)
                 self?.spotEnded(id, outcome, ticket)
             }
@@ -803,6 +818,7 @@ package final class FFTAnalysis {
 
     private func spotEnded(_ id: FFTSpot.ID, _ outcome: FFTSpot.Outcome, _ ticket: Int) {
         spotJobOut = false
+        spotTask = nil
         if ticket == spotGeneration {
             spotRunning = nil
             if let index = spots.firstIndex(where: { $0.id == id }) {
