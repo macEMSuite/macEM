@@ -1,7 +1,7 @@
 //
 //  DisplayNormalizationSeamTests.swift
-//  `FloatImage` and `DiffractionPattern` normalise for display through ImagoKit's `DisplayNormalization`: the same
-//  values, the same masked sentinel, the same finite range, linear, symmetric and log.
+//  `FloatImage` normalises for display through ImagoKit's `DisplayNormalization`: the same values, the same masked sentinel,
+//  the same finite range, linear and symmetric. A pattern's log display is `CanvasPixels.pattern` (DiffractionPatternCanvasTests).
 //
 
 import XCTest
@@ -19,11 +19,5 @@ nonisolated final class DisplayNormalizationSeamTests: XCTestCase {
         XCTAssertEqual(image.normalized(symmetric: true), DisplayNormalization.normalized(pixels, symmetric: true))
         XCTAssertEqual(image.minMax.0, -3)
         XCTAssertEqual(image.minMax.1, 1e6)
-    }
-
-    func testDiffractionPatternIsTheKitNormalisation() {
-        let pattern = DiffractionPattern(qy: 2, qx: 4, pixels: pixels)
-        XCTAssertEqual(pattern.normalized(useLog: false), DisplayNormalization.normalized(pixels))
-        XCTAssertEqual(pattern.normalized(useLog: true), DisplayNormalization.normalizedLog(pixels))
     }
 }

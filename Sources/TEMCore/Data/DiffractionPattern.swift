@@ -28,21 +28,3 @@ package nonisolated struct FloatImage {
         self.pixels = pixels
     }
 }
-
-package nonisolated struct DiffractionPattern {
-    package let qy: Int
-    package let qx: Int
-    package let pixels: [Float]
-
-    /// Normalize for display. CBED patterns span many orders of magnitude, so log display is useful.
-    package nonisolated func normalized(useLog: Bool) -> [Float] {
-        useLog ? DisplayNormalization.normalizedLog(pixels) : DisplayNormalization.normalized(pixels)
-    }
-
-    // Explicit so the memberwise initializer is `package` (synthesized ones are internal).
-    package nonisolated init(qy: Int, qx: Int, pixels: [Float]) {
-        self.qy = qy
-        self.qx = qx
-        self.pixels = pixels
-    }
-}

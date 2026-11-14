@@ -5,8 +5,9 @@
 //        nothing here is measured, exported or saved, and no measurement reads the canvas (the measuring tools read the image's own
 //        pixels). The intensity histogram the Display section draws is computed once with the canvas, off the main
 //        actor, from the RAW pixels (`IntensityHistogram`; ImagoKit ImagoCore with an app default-bins extension; gated against numpy).
-//        A diffraction pattern's canvas is of its display values, log or linear (`CanvasPixels.pattern`): its range and its
-//        histogram are of what is drawn.
+//        A diffraction pattern's canvas is the file's own pixels (`CanvasPixels.pattern`); its log display is the view's shader
+//        transfer (`MetalImageView.DisplayTransfer.log`, macEM#580), with no log copy of the pixels, and its range and its
+//        histogram are of the log values drawn.
 //
 
 import ShellMetal
@@ -32,6 +33,9 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
     /// (`metalNative`), one or two bytes a pixel in the app and on the GPU. nil for every other canvas.
     package let native: StoredPixels?
     package let scale: MetalImageView.PixelScale
+    /// How the view maps a raw pixel to a display value: linear over the raw range, or a pattern's log10(1 + max(v, 0)) over
+    /// the same of it (`pattern(image:log:)`), drawn in the shader. `.linear` for every canvas but a log pattern's.
+    package let transfer: MetalImageView.DisplayTransfer
     /// Changes exactly when the drawn pixels do (`MetalImageView.contentVersion`); the view re-uploads on it.
     package let contentVersion: Int
     /// The finite raw range the display values span (0 maps to its lower bound, 1 to its upper); nil when the image
@@ -49,12 +53,14 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
     }
 
     private init(width: Int, height: Int, values: [Float], native: StoredPixels? = nil, scale: MetalImageView.PixelScale,
-                 contentVersion: Int, rawRange: ClosedRange<Float>?, histogram: IntensityHistogram?) {
+                 transfer: MetalImageView.DisplayTransfer = .linear, contentVersion: Int, rawRange: ClosedRange<Float>?,
+                 histogram: IntensityHistogram?) {
         self.width = width
         self.height = height
         self.values = values
         self.native = native
         self.scale = scale
+        self.transfer = transfer
         self.contentVersion = contentVersion
         self.rawRange = rawRange
         self.histogram = histogram
@@ -121,6 +127,13 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
         let v = native?[index] ?? values[index]
         guard case .raw(let range) = scale else { return v }
         guard let range, v.isFinite else { return FloatImage.invalidDisplayValue }
+        if transfer == .log {
+            // ImagoKit's `DisplayNormalization.normalizedLog`, one pixel: log10(1 + max(v, 0)) in Double, rounded to Float32,
+            // over the same of the raw range (the log is monotonic, so those are the finite log values' extremes).
+            func log(_ x: Float) -> Float { Float(log10(1.0 + Double(max(x, 0)))) }
+            let low = log(range.lowerBound), span = log(range.upperBound) - low
+            return span > 0 ? (log(v) - low) / span : 0
+        }
         let span = range.upperBound - range.lowerBound
         return span > 0 ? (v - range.lowerBound) / span : 0
     }
@@ -173,14 +186,45 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
         return Thumbnail(width: w, height: h, normalized: out)
     }
 
-    /// The canvas of a diffraction pattern: its display values, log10(1 + max(I, 0)) when `log` (a pattern spans decades), else
-    /// linear, normalised (`DiffractionPattern.normalized`). The range is 0…1 and the histogram is of these values, the ones drawn,
-    /// so the Display section's handles move what the eye sees. Built off the main actor (`DiffractionViewState.show`).
-    package static func pattern(pixels: [Float], width: Int, height: Int, log: Bool) -> CanvasPixels {
-        let normalized = TEMCore.DiffractionPattern(qy: height, qx: width, pixels: pixels).normalized(useLog: log)
-        return CanvasPixels(width: width, height: height, normalized: normalized,
-                            contentVersion: MetalImageView.contentVersion(of: normalized, width: width, height: height), rawRange: 0...1,
-                            histogram: IntensityHistogram.compute(normalized))
+    /// The canvas of a diffraction pattern: the file's own pixels, shared with the image at their stored depth (`make(image:)`),
+    /// never a copy (macEM#580: a log Float32 copy and its texture held 2.5 GB for the 375 MP alite TIFF; GMS takes the log in
+    /// the display). Linear, it is the Image room's canvas. Log (a pattern spans decades), the view draws log10(1 + max(I, 0))
+    /// in its shader (`transfer`), value for value ImagoKit's `DisplayNormalization.normalizedLog` for a finite pixel (a
+    /// non-finite one is drawn masked); the range is then 0…1 and the histogram is of those log values, so the Display
+    /// section's handles move what the eye sees. The histogram reads at most `histogramSampleCap` pixels, evenly strided, and
+    /// the pattern's two extremes (0 and 1): every pixel of a pattern up to that size. Built off the main actor
+    /// (`DiffractionViewState.show`).
+    package static func pattern(image: CalibratedImage, log: Bool) -> CanvasPixels {
+        let raw = make(image: image)
+        guard log else { return raw }
+        func logCanvas(histogram: IntensityHistogram?) -> CanvasPixels {
+            CanvasPixels(width: raw.width, height: raw.height, values: raw.values, native: raw.native, scale: raw.scale,
+                         transfer: .log, contentVersion: raw.contentVersion ^ logVersionSalt,
+                         rawRange: raw.rawRange.map { _ in 0...1 }, histogram: histogram)
+        }
+        return logCanvas(histogram: logCanvas(histogram: nil).logHistogram())
+    }
+
+    /// The pixels a log pattern's histogram reads at most (4 MB of Float32 for the moment it is built).
+    package static let histogramSampleCap = 1 << 20
+
+    /// Mixed into a log canvas's version: the same pixels drawn log are another picture, and the view uploads again.
+    private static let logVersionSalt = 0x6c6f_675f_7472_616e
+
+    /// The histogram of the display values (`normalizedValue(at:)`) of every pixel, or of `histogramSampleCap` of them evenly
+    /// strided with the extremes 0 and 1 beside them.
+    private func logHistogram() -> IntensityHistogram? {
+        let stride = max(1, (count + Self.histogramSampleCap - 1) / Self.histogramSampleCap)
+        var sample: [Float] = []
+        sample.reserveCapacity(count / stride + 3)
+        var i = 0
+        while i < count {
+            let v = normalizedValue(at: i)
+            if v != FloatImage.invalidDisplayValue { sample.append(v) }
+            i += stride
+        }
+        if stride > 1, rawRange != nil { sample += [0, 1] }
+        return IntensityHistogram.compute(sample)
     }
 }
 

@@ -27,7 +27,7 @@ package final class DiffractionViewState {
     /// else the whole image.
     package var zoomHalfSide: Double?
     package private(set) var autoHalfSide: Double?
-    /// The pattern as drawn: its canvas (the display values, log or linear) and the Display section's colormap, window and gamma.
+    /// The pattern as drawn: its canvas (the file's pixels, drawn log or linear) and the Display section's colormap, window and gamma.
     /// Its own, not the Image room's: a pattern reads in viridis where the same file's image reads in gray.
     package let presentation: ImagePresentation = {
         let p = ImagePresentation()
@@ -92,6 +92,6 @@ package final class DiffractionViewState {
 
     @concurrent
     nonisolated private static func canvas(_ image: CalibratedImage, log: Bool) async -> CanvasPixels {
-        CanvasPixels.pattern(pixels: image.pixels, width: image.width, height: image.height, log: log)
+        CanvasPixels.pattern(image: image, log: log)
     }
 }
