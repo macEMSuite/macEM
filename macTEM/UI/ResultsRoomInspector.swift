@@ -22,7 +22,6 @@ import TEMSession
 /// The room's Settings tab content.
 struct ResultsRoomSettings: View {
     let item: OpenItem
-    private var image: CalibratedImage { item.session.imageOrBlank }
     @Environment(AppState.self) private var appState
 
     var body: some View {

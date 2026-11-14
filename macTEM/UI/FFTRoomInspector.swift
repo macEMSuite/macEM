@@ -44,7 +44,6 @@ import ImagoFilters
 /// The room's Settings tab: one section after another, as `ImageRoomSettings` is.
 struct FFTRoomInspectorSettings: View {
     let session: ImageSession
-    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {
