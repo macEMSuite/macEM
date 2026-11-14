@@ -21,7 +21,7 @@ package nonisolated enum StoredPixels: Sendable, Equatable {
         func values<T>(_: T.Type) -> [T] {
             let count = bytes.count / MemoryLayout<T>.stride
             return [T](unsafeUninitializedCapacity: count) { buffer, initialised in
-                _ = bytes.withUnsafeBytes { raw in raw.copyBytes(to: UnsafeMutableRawBufferPointer(buffer)) }
+                _ = bytes.copyBytes(to: buffer)
                 initialised = count
             }
         }

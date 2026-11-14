@@ -50,7 +50,10 @@ nonisolated final class StoredPixelsCanvasTests: XCTestCase {
         let (stored, float) = Self.images()
         for (a, b, w) in [(ImagePoint(x: 3.2, y: 4.7), ImagePoint(x: 30.1, y: 17.9), 1),
                           (ImagePoint(x: 0, y: 0), ImagePoint(x: 36, y: 22), 5),
-                          (ImagePoint(x: 18, y: 2), ImagePoint(x: 18.5, y: 20), 9)] {
+                          (ImagePoint(x: 18, y: 2), ImagePoint(x: 18.5, y: 20), 9),
+                          // Outside the image: reflect reads the mirrored pixels inside it.
+                          (ImagePoint(x: -10, y: 5), ImagePoint(x: -3, y: 12), 3),
+                          (ImagePoint(x: 40, y: -6), ImagePoint(x: 45, y: 30), 7)] {
             let p = LineProfile.sample(stored, from: a, to: b, width: w), q = LineProfile.sample(float, from: a, to: b, width: w)
             XCTAssertEqual(p.positions, q.positions)
             XCTAssertEqual(p.samples.count, q.samples.count)

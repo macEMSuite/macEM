@@ -27,15 +27,22 @@ extension LineProfile {
 extension LineProfile {
     /// The pixels a profile reads, as the kit's image, and its ends in that image's pixels. A Float32 image is itself (no copy).
     /// An 8- or 16-bit image is widened only in the box the profile can touch (#566): the segment's bounds, half the width and two
-    /// pixels for the bilinear neighbours each side, clipped to the image, so an edge the box shares with the image reflects as
-    /// the image's does and no sample reads past a box edge inside the image. The ends move by whole pixels; the positions are
+    /// pixels for the bilinear neighbours each side, and the mirror of any part past an image edge (mode reflect reads it back
+    /// inside), clipped to the image: an edge the box shares with the image reflects as the image's does, and no sample reads
+    /// past a box edge inside the image. The ends move by whole pixels; the positions are
     /// lengths along the line, the same in either image.
     nonisolated static func around(_ image: CalibratedImage, from: PixelPoint, to: PixelPoint,
                                    width: Int) -> (Micrograph, PixelPoint, PixelPoint) {
         if case .float32 = image.stored { return (image.micrograph, from, to) }
         let margin = Double(width) / 2 + 2
-        let lowX = min(from.x, to.x) - margin, highX = max(from.x, to.x) + margin
-        let lowY = min(from.y, to.y) - margin, highY = max(from.y, to.y) + margin
+        var lowX = min(from.x, to.x) - margin, highX = max(from.x, to.x) + margin
+        var lowY = min(from.y, to.y) - margin, highY = max(from.y, to.y) + margin
+        // reflect: −k reads k − 1, n − 1 + k reads n − k; the reach past an edge comes back that far inside it.
+        let n = Double(image.width), m = Double(image.height)
+        if lowX < 0 { highX = max(highX, -lowX) }
+        if highX > n - 1 { lowX = min(lowX, 2 * n - 2 - highX) }
+        if lowY < 0 { highY = max(highY, -lowY) }
+        if highY > m - 1 { lowY = min(lowY, 2 * m - 2 - highY) }
         // A segment the kit refuses (a non-finite or far end) is handed over whole, so the kit refuses it as before.
         guard [lowX, highX, lowY, highY].allSatisfy({ $0.isFinite && abs($0) < 1e9 }) else { return (image.micrograph, from, to) }
         let x0 = min(max(Int(lowX.rounded(.down)), 0), image.width - 1), x1 = min(max(Int(highX.rounded(.up)) + 1, x0 + 1), image.width)
