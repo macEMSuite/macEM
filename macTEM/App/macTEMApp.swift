@@ -90,7 +90,10 @@ private struct ImageWindow: View {
             .focusedSceneValue(\.closeImageWindow, CloseWindowAction { dismissWindow() })
             // The app's windows know this one while it is on screen; a window closed with something to lose is parked (`AppWindows`).
             .onAppear {
-                windows.openWindow = { openWindow(id: "image") }
+                // The action alone, not this view: a closure that reads `openWindow` captures the view and, through its state, the
+                // window's `AppState`, which the app-lifetime `AppWindows` would then keep with its files after the window closed (#617).
+                let open = openWindow
+                windows.openWindow = { open(id: "image") }
                 windows.enroll(appState)
                 // The agent door (Settings > Agents) lists this window, and opens when it was left on.
                 MacTEMAgentDoor.start(with: appState)

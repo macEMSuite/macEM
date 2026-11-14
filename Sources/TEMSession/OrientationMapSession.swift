@@ -358,6 +358,7 @@ package final class OrientationMapSession {
         slipFiles = [:]
         document = nil; sources = []; isOpening = false; isDrawing = false
         raster = nil; rasterRGBA = nil; grid = []; keys = []
+        propertyPresentation.releaseCanvas()
         pinned = .origin; layer = .ipf(.z)
     }
 
