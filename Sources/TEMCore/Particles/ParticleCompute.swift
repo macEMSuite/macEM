@@ -119,11 +119,16 @@ package nonisolated enum ParticleCompute {
                                 pixelSize: Double? = nil) throws -> ParticleReport {
         guard let range = range(pixels) else { throw ParticleError.noFiniteValues }
         let cut = try mask(pixels: pixels, width: width, height: height, range: range, settings: settings)
+        // A cancelled run (its file closed, #618) stops between stages and lets go of the image it took.
+        try Task.checkCancellation()
         let found = try Segmentation.label(cut.mask, width: width, height: height, connectivity: settings.connectivity)
+        try Task.checkCancellation()
         // scikit-image's `remove_small_objects(max_size=)` clears objects of at most max_size pixels: below the minimum is minimum − 1.
         let kept = try BinaryMorphology.removeSmallObjects(cut.mask, width: width, height: height, maxSize: settings.minimumArea - 1,
                                                            connectivity: settings.connectivity)
+        try Task.checkCancellation()
         let labels = try Segmentation.label(kept, width: width, height: height, connectivity: settings.connectivity)
+        try Task.checkCancellation()
         let objects = try Segmentation.objectMoments(labels).map { ParticleObject(moments: $0) }
         let density = try ObjectStatistics.arealDensity(labels: labels, pixelSize: pixelSize)
         var s = ParticleSummary()

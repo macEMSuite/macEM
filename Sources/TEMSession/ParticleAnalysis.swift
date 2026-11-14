@@ -132,10 +132,13 @@ package final class ParticleAnalysis {
         report = nil; maskPreview = nil; failure = nil; isComputing = false; showsObjects = false; selectedLabel = nil
     }
 
-    /// The item's pixels go (closed, or gone cold): the mask preview with them, and a preview being computed lands nothing. The report
-    /// stays (numbers and outlines for the same file); the switch stays, so the preview is made again when the image is back.
+    /// The item's pixels go (closed, or gone cold): the mask preview with them, and a preview or a Show Objects run being computed
+    /// stops at its next stage and lands nothing, so neither keeps the image it took (#618). The report stays (numbers and outlines
+    /// for the same file); the switch stays, so the preview is made again when the image is back.
     package func releasePixels() {
         previewTask?.cancel(); previewTask = nil; previewGeneration += 1
+        task?.cancel(); task = nil; runGeneration += 1
+        isComputing = false
         maskPreview = nil
     }
 
