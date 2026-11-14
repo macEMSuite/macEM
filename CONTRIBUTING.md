@@ -50,6 +50,11 @@ the kit's repository and reaches the app when `Package.swift` moves to the kit's
   widened to hide a bug. Readers, I/O and metadata are tested exact.
 - **One focused change per commit**, with a clear message, and CI green.
 - A result not yet compared with a dataset of known truth says `validation: none` until it has been.
+- **One owner holds a file's data.** `OpenItems` → `OpenItem` → its session and presentation, and the room sessions,
+  hold the pixels, canvases, masks and spectrum cubes. A view, `@State`, closure, `Binding`, preference, focused value
+  or environment value holds the owner (or a small value: an index, a size, a version) and reads the pixels through it.
+  An array is a value: a closure that SwiftUI keeps after its view is gone keeps every buffer it captured alive.
+  `PixelOwnershipTests` fails a view in `macTEM/UI` that stores one.
 
 ## Licence
 

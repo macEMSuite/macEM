@@ -23,7 +23,7 @@ import TEMSession
 /// Tool, marks, and the selected profile — for the selected file. The owners come in as parameters, as the Display
 /// section's does, so `ImageRoomSettings` is the one place that follows the selected file.
 struct ImageRoomMeasureSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
     let measurements: ImageMeasurements
     let tools: ImageRoomTools
     /// The selected item, whose session state the tail shows; nil with no file open.
@@ -32,8 +32,8 @@ struct ImageRoomMeasureSection: View {
     var body: some View {
         InspectorSection("Measure") {
             MeasureToolPicker(tools: tools)
-            MeasureMarksList(image: image, measurements: measurements)
-            MeasureProfileDetail(image: image, measurements: measurements)
+            MeasureMarksList(session: session, measurements: measurements)
+            MeasureProfileDetail(session: session, measurements: measurements)
             if let item { ImageRoomSessionTail(item: item) }
         }
     }
@@ -84,7 +84,8 @@ private extension ImageRoomTools.Tool {
 /// unchanged text, which a list swaps to white and a plain row does not (not checked on screen). `.quaternary` is the
 /// system's own fill, adapts to light, dark and Increase Contrast, and is no custom wash (UI contract rule 3).
 private struct MeasureMarksList: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let measurements: ImageMeasurements
     @FocusState private var hasFocus: Bool
 
@@ -188,7 +189,8 @@ private struct MeasureMarkRow: View {
 /// samples; the File menu's item of the same name opens the same panel, for when this row has scrolled out of view).
 private struct MeasureProfileDetail: View {
     @Environment(AppState.self) private var appState
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let measurements: ImageMeasurements
 
     var body: some View {

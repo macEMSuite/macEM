@@ -20,11 +20,12 @@ import TEMSession
 /// The room's Settings: the calibration a distance in this room is measured in (readiness, first), then the
 /// display of the selected file and its marks.
 struct ImageRoomSettings: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        ImageRoomCalibrationSection(image: image)
+        ImageRoomCalibrationSection(session: session)
         // An image stack read on demand (a multi-page TIFF): the frame shown and the slider that moves it.
         if let item = appState.openItems.selected, item.stack != nil { ImageRoomStackSection(item: item, items: appState.openItems) }
         // A render's bar starts hidden (`ImagePresentation.startsWithScaleBar`), and its Display section says why.
@@ -32,19 +33,20 @@ struct ImageRoomSettings: View {
                                 isRender: !ImagePresentation.startsWithScaleBar(notes: image.notes))
         // The Particles view: objects found on the image, outlined over it. Above Measure, so it is in view without scrolling past the tools.
         if let item = appState.openItems.selected {
-            ImageRoomParticlesSection(image: image, item: item, rawRange: appState.presentation.canvas?.rawRange)
+            ImageRoomParticlesSection(item: item, rawRange: appState.presentation.canvas?.rawRange)
         }
-        ImageRoomMeasureSection(image: image, measurements: appState.measurements, tools: appState.imageRoomTools,
+        ImageRoomMeasureSection(session: session, measurements: appState.measurements, tools: appState.imageRoomTools,
                                 item: appState.openItems.selected)
         // The record of those marks: collapsed, drawn only when there is something to show.
-        if let item = appState.openItems.selected { ImageRoomLineageSection(image: image, item: item) }
+        if let item = appState.openItems.selected { ImageRoomLineageSection(item: item) }
     }
 }
 
 /// The calibration this room's distances use: the x axis for horizontal lengths (the scale bar), each axis
 /// for its own direction.
 struct ImageRoomCalibrationSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     @Environment(AppState.self) private var appState
 
     var body: some View {
@@ -67,8 +69,10 @@ struct ImageRoomCalibrationSection: View {
 /// The file, the object it came from, its size, voltage and both axes as stored (a metre axis in nm, µm or mm),
 /// and the value range the display spans.
 struct ImageInfoSection: View {
-    let image: CalibratedImage
-    let canvas: CanvasPixels?
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
+    let presentation: ImagePresentation
+    private var canvas: CanvasPixels? { presentation.canvas }
     @Environment(AppState.self) private var appState
 
     var body: some View {

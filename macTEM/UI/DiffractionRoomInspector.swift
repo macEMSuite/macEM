@@ -16,20 +16,20 @@ import DiffractoCore
 import DiffractoGeometry
 
 struct DiffractionRoomSettings: View {
-    let image: CalibratedImage
     let item: OpenItem
+    private var image: CalibratedImage { item.session.imageOrBlank }
 
     var body: some View {
         let analysis = item.diffraction
         let view = item.diffractionView
         Group {
             DiffractionCentreSection(analysis: analysis, view: view)
-            DiffractionCalibrationSection(image: image, analysis: analysis, view: view)
+            DiffractionCalibrationSection(session: item.session, analysis: analysis, view: view)
             DiffractionDisplaySection(view: view)
             DiffractionToolsSection(view: view)
             DiffractionCrystalSection(analysis: analysis)
-            DiffractionRingsSection(image: image, analysis: analysis, view: view)
-            DiffractionExportSection(image: image, analysis: analysis)
+            DiffractionRingsSection(session: item.session, analysis: analysis, view: view)
+            DiffractionExportSection(session: item.session, analysis: analysis)
         }
         .onAppear { analysis.bind(image) }
     }
@@ -72,7 +72,8 @@ private struct DiffractionCentreSection: View {
 }
 
 private struct DiffractionCalibrationSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: DiffractionAnalysis
     let view: DiffractionViewState
 
@@ -174,7 +175,8 @@ private struct DiffractionCrystalSection: View {
 }
 
 private struct DiffractionRingsSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: DiffractionAnalysis
     let view: DiffractionViewState
 
@@ -225,7 +227,8 @@ private struct DiffractionDisplaySection: View {
 }
 
 private struct DiffractionExportSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: DiffractionAnalysis
     @Environment(AppState.self) private var appState
     @State private var exporting = false

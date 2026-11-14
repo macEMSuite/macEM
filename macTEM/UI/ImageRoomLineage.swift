@@ -83,8 +83,8 @@ nonisolated enum LineageFormat {
 
 /// Drawn only when there is a node or a session state to show; collapsed by default.
 struct ImageRoomLineageSection: View {
-    let image: CalibratedImage
     let item: OpenItem
+    private var image: CalibratedImage { item.session.imageOrBlank }
     @SceneStorage("inspector.section.image.Lineage") private var expanded = false
 
     var body: some View {

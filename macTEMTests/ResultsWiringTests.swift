@@ -367,8 +367,8 @@ nonisolated final class ResultsWiringTests: XCTestCase {
         let view = squeezed(try source("macTEM/UI/WorkspaceView.swift"))
         XCTAssertTrue(view.contains("else if appState.navigation.workspaceArea == .results { ResultsRoom(item: item) }"))
         let inspector = squeezed(try source("macTEM/UI/WorkspaceInspector.swift"))
-        XCTAssertTrue(inspector.contains("case .results: if let item = appState.openItems.selected { ResultsRoomSettings(image: image, item: item)"))
-        XCTAssertTrue(inspector.contains("if appState.navigation.workspaceArea == .results, let item = appState.openItems.selected { ResultsRoomInfo(image: image, item: item) }"))
+        XCTAssertTrue(inspector.contains("case .results: if let item = appState.openItems.selected { ResultsRoomSettings(item: item)"))
+        XCTAssertTrue(inspector.contains("if appState.navigation.workspaceArea == .results, let item = appState.openItems.selected { ResultsRoomInfo(item: item) }"))
         XCTAssertFalse(inspector.contains("case .prepare, .diffraction, .results:"), "the room is no longer a placeholder")
     }
 
