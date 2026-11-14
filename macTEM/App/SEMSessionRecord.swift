@@ -25,9 +25,20 @@ final class SEMSessionRecord {
     /// Each room's Output lines, in the order logged.
     private(set) var lines: [Room: [SEMLogLine]] = [:]
 
-    /// A room wrote a file.
+    /// The longest side of a picture the record keeps: more than the report draws at a column's width (about 1950 px at 300 dpi for an A4
+    /// column is printed sharp at 1600), and a 19433 × 19320 export kept at its own size would cost GBs for the session's life (#619).
+    static let figureSide = 1600
+
+    /// A room wrote a file. A picture is kept at most `figureSide` on its longest side, with its own size noted.
     func wrote(_ file: SEMExportedFile) {
-        exports.append(file)
+        var kept = file
+        if let png = file.png, let figure = SEMReportFigure(png: png, caption: "", file: nil),
+           let smaller = MacTEMAgentDoor.smaller(png, side: Self.figureSide) {
+            kept.png = smaller
+            kept.pixelWidth = figure.pixelWidth
+            kept.pixelHeight = figure.pixelHeight
+        }
+        exports.append(kept)
     }
 
     /// A room logged `text` (an empty line and the "…ing" lines of a run in flight are not kept: the line that ends the run says it).

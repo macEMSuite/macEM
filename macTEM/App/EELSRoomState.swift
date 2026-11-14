@@ -89,6 +89,9 @@ final class EELSRoomState {
         exporting = kind
     }
 
+    /// The save panel is done, written or not: the export's bytes are let go (#619), not kept until the next export.
+    func didFinishExport() { exportData = Data() }
+
     func requestImport() { importRequest &+= 1 }
 
     /// The spectrum's hover: the status line's readout, marked as the spectrum's (`spectrumReadout`); nil when the pointer leaves the plot.

@@ -71,7 +71,8 @@ package final class EELSSession {
     package private(set) var fitOnlyElements: Set<String> = []
     package private(set) var model: EELSFitResult?
     package private(set) var modelComposition: [EELSCompositionPixel]?
-    /// The deconvolution the fit on screen was made on (Fourier-ratio only; nil when the fit took the stored core loss).
+    /// The deconvolution the fit on screen was made on (Fourier-ratio only; nil when the fit took the stored core loss): its words only, without
+    /// its cubes (`withoutCubes`); the cubes are the Deconvolve stage's own (`deconvolution`).
     package private(set) var modelDeconvolution: EELSDeconvolutionResult?
     /// The whole map's summed spectra fitted as one pixel: the region table's numbers (the stable ones; the maps' per-pixel numbers are the second estimator).
     package private(set) var regionModel: EELSFitResult?
@@ -872,7 +873,7 @@ package final class EELSSession {
         modelVersion += 1
         model = result
         modelReferenceNames = referenceNames
-        modelDeconvolution = deconvolved
+        modelDeconvolution = deconvolved?.withoutCubes
         modelComposition = EELSFitCompute.composition(result, fitOnly: fitOnlyElements)
         regionModel = region
         regionQuality = quality

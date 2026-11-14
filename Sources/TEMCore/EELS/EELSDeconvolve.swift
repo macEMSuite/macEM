@@ -91,6 +91,12 @@ package nonisolated struct EELSDeconvolutionResult: Sendable {
     package let threshold: EELSThresholdChoice
 
     package var unavailableCount: Int { unavailable.filter { $0 != nil }.count }
+    /// The same result without its deconvolved cubes: what a fit keeps to say how it was made (its footer, notes and method JSON), so a
+    /// stage run again does not leave a second GB-scale cube behind with the fit (#619).
+    package var withoutCubes: EELSDeconvolutionResult {
+        EELSDeconvolutionResult(choice: choice, lowLoss: nil, coreLoss: nil, unavailable: unavailable, fftSize: fftSize, fwhmEV: fwhmEV,
+                                taperedChannels: taperedChannels, methodName: methodName, thresholdText: thresholdText, threshold: threshold)
+    }
     /// The pixels the kit answered (the rest are zeros in its image and must not be summed or fitted).
     package var answered: PixelMask { unavailable.map { $0 == nil } }
 }
