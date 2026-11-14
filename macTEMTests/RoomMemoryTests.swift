@@ -36,9 +36,12 @@ nonisolated final class RoomMemoryTests: XCTestCase {
     @MainActor private func openVisitClose(_ url: URL, state: AppState, host: NSView) async throws -> Int {
         final class Weak<T: AnyObject> { weak var value: T?; init(_ value: T) { self.value = value } }
         await state.open(urls: [url])?.value
-        let item = try XCTUnwrap(state.openItems.selected, "the image opened")
-        XCTAssertNil(item.readFailure)
-        let watched = (item: Weak(item), session: Weak(item.session), presentation: Weak(item.presentation))
+        // No strong reference to the item outlives this block: the test must not be what keeps it.
+        let (id, watched) = try { () throws -> (OpenItem.ID, (item: Weak<OpenItem>, session: Weak<ImageSession>, presentation: Weak<ImagePresentation>)) in
+            let item = try XCTUnwrap(state.openItems.selected, "the image opened")
+            XCTAssertNil(item.readFailure)
+            return (item.id, (Weak(item), Weak(item.session), Weak(item.presentation)))
+        }()
         var peak = 0
         for room in Self.rooms {
             state.selectWorkspace(room)
@@ -52,13 +55,15 @@ nonisolated final class RoomMemoryTests: XCTestCase {
             peak = max(peak, ImageStackTests.footprint())
         }
         state.selectWorkspace(.image)
-        state.openItems.close(item.id)
+        state.openItems.close(id)
         await state.openItems.settled()
         host.layoutSubtreeIfNeeded()
         host.display()
-        try await waitUntil("the closed item, its session and its presentation to be released", seconds: 10) {
+        let released = try await conditionHolds(within: 10) {
             watched.item.value == nil && watched.session.value == nil && watched.presentation.value == nil
         }
+        XCTAssertTrue(released, "after the close, still held: item \(watched.item.value != nil), session \(watched.session.value != nil), "
+                      + "presentation \(watched.presentation.value != nil)")
         return peak
     }
 
