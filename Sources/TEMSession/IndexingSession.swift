@@ -281,6 +281,7 @@ package final class IndexingSession {
     /// The dataset was closed: the room goes back to its door.
     package func close() {
         reset()
+        mapPresentation.releaseCanvas(); patternPresentation.releaseCanvas(); bestMatchPresentation.releaseCanvas()
     }
 
     /// Everything of the dataset goes; the master patterns opened and the orientations sampled stay (they are not the dataset's).

@@ -139,13 +139,14 @@ final class AppWindows {
 }
 
 extension AppState {
-    /// Closes every file this window holds (images, the spectrum images, the EBSD dataset), letting go of their pixels: its window closed
+    /// Closes every file this window holds (images, the spectrum images, the EBSD dataset, the orientation maps), letting go of their pixels: its window closed
     /// with nothing to lose (`AppWindows.windowWillClose`).
     func releaseFiles() {
         for id in openItems.items.map(\.id) { openItems.close(id) }
         eels.close()
         edx.close()
         ebsd.close()
+        maps.close()
     }
 
     /// The open files whose marks are not saved to their session file, by the sidebar's titles (the quit question's names).
