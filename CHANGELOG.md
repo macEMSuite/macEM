@@ -3,6 +3,35 @@
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). App versions are tagged with a `v`
 (`v1.0.0`); release-please writes each new entry above the older ones from the merged pull requests' titles.
 
+## [2.0.3](https://github.com/macEMSuite/macEM/compare/v2.0.2...v2.0.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* a stack frame keeps the bit depth of its file ([#678](https://github.com/macEMSuite/macEM/issues/678)) ([cd770f6](https://github.com/macEMSuite/macEM/commit/cd770f6b87f2e3f89380426ab42ef7de3f95175f))
+* a Velox EELS cube holds its counts as Floats where the file's values are exact in Float32 ([#677](https://github.com/macEMSuite/macEM/issues/677)) ([107b5f2](https://github.com/macEMSuite/macEM/commit/107b5f2acef5cbe724eea5ea2b78a6ca4fe4a88d))
+* an image keeps the bit depth of its file, and an 8- or 16-bit image is drawn as stored ([#676](https://github.com/macEMSuite/macEM/issues/676)) ([6c1eef6](https://github.com/macEMSuite/macEM/commit/6c1eef6e1b5ca0efe5951c3a39b71f65e39393ae))
+* carry the lattice unit from the file to the Kikuchi overlay instead of guessing it ([#657](https://github.com/macEMSuite/macEM/issues/657)) ([b91d1a4](https://github.com/macEMSuite/macEM/commit/b91d1a405a008722b9814d49162e0b651ee0fd8b))
+* centre the ZLP shift tile on its flat bulk so far pixels on one side do not paint it solid ([#655](https://github.com/macEMSuite/macEM/issues/655)) ([542c8f8](https://github.com/macEMSuite/macEM/commit/542c8f89aa299cc109386b8039aa18f1df45056a))
+* closing a file cancels its running FFT jobs, so their image goes without waiting ([#669](https://github.com/macEMSuite/macEM/issues/669)) ([4d20f69](https://github.com/macEMSuite/macEM/commit/4d20f6989115b818ed3c30f4c223db48257b48a7))
+* closing a file cancels its running particle analysis, which stops between stages ([#675](https://github.com/macEMSuite/macEM/issues/675)) ([2e7c514](https://github.com/macEMSuite/macEM/commit/2e7c514756bfcd033056cc22d682c19354fe88a5))
+* closing a file, a window or a room lets go of every canvas and mask it held ([#668](https://github.com/macEMSuite/macEM/issues/668)) ([35a5738](https://github.com/macEMSuite/macEM/commit/35a5738a9af02c1b8d5912ed24b72e4558c3dec5))
+* damaged EDS and EBSD files are refused in words, and one flat pattern no longer stops a run ([#648](https://github.com/macEMSuite/macEM/issues/648)) ([ebc6177](https://github.com/macEMSuite/macEM/commit/ebc6177671bdb08f0c753a54a7ebe70d0c0d06bb))
+* demo files are replaced atomically and a damaged sidecar never reaches a force-unwrap ([#649](https://github.com/macEMSuite/macEM/issues/649)) ([ab24ff8](https://github.com/macEMSuite/macEM/commit/ab24ff8be059b2b8b4b06464d789a5399b673c4d))
+* dictionary matches, orientation samples and pole figures stay within a stated size ([#671](https://github.com/macEMSuite/macEM/issues/671)) ([96faf2d](https://github.com/macEMSuite/macEM/commit/96faf2df9fd188fc80c5d56c012ba28f00cefd69))
+* drop a ring fit when the centre moves while it runs ([bd09a98](https://github.com/macEMSuite/macEM/commit/bd09a981d703e8aa9c975b22173f9b304ccf47ab))
+* drop a ring fit when the diffraction centre moves while it runs ([#651](https://github.com/macEMSuite/macEM/issues/651)) ([bd09a98](https://github.com/macEMSuite/macEM/commit/bd09a981d703e8aa9c975b22173f9b304ccf47ab))
+* exports, a refitted deconvolution, colour maps and overlay masters no longer hold memory after their use ([#670](https://github.com/macEMSuite/macEM/issues/670)) ([3ebb434](https://github.com/macEMSuite/macEM/commit/3ebb434639cc77e939f3c68c416a150baccf140b))
+* grain areas and the lineal intercept use both scan steps ([#653](https://github.com/macEMSuite/macEM/issues/653)) ([1d6792b](https://github.com/macEMSuite/macEM/commit/1d6792ba0259b345a57a607515c14f14945d3a2c))
+* make the quality maps from the processed scan once a Process run has landed ([#661](https://github.com/macEMSuite/macEM/issues/661)) ([1f83a65](https://github.com/macEMSuite/macEM/commit/1f83a65a538b70b58cd302ddfa64fd726fb40bba))
+* NaN, zero and degenerate inputs in SEM indexing never crash or hang ([#646](https://github.com/macEMSuite/macEM/issues/646)) ([62a37ff](https://github.com/macEMSuite/macEM/commit/62a37ff4b591a5eef3782905812d7552a4141714))
+* no force-unwrap or try! can trap on a damaged file; the audit fails on a new one ([#662](https://github.com/macEMSuite/macEM/issues/662)) ([ec71df5](https://github.com/macEMSuite/macEM/commit/ec71df561f1219a5a78335dba4fc327c87e41030))
+* no inspector view holds a file's pixels, and a test fails one that does ([#673](https://github.com/macEMSuite/macEM/issues/673)) ([963ef78](https://github.com/macEMSuite/macEM/commit/963ef78e0d70aefd07679e83a37acc9ad3e4bf03))
+* pair a monoclinic m phase in Compare and sample the ODF without column aliasing ([#654](https://github.com/macEMSuite/macEM/issues/654)) ([06f844c](https://github.com/macEMSuite/macEM/commit/06f844ca258f13166d5329ddb4a00543d1762329))
+* refuse the GND density on a map whose step is in no length unit ([#652](https://github.com/macEMSuite/macEM/issues/652)) ([54277c9](https://github.com/macEMSuite/macEM/commit/54277c9cdd367461f05b29bacb3054d0f04ce3db))
+* say when the projection centre, pixel size or sample tilt is assumed rather than read from the file ([#658](https://github.com/macEMSuite/macEM/issues/658)) ([584d817](https://github.com/macEMSuite/macEM/commit/584d817875a19f0e428cdaf706f93badeefb37e0))
+* write the known acquisition values into .ang and .ctf and name the build in every SEM export ([#656](https://github.com/macEMSuite/macEM/issues/656)) ([0311e83](https://github.com/macEMSuite/macEM/commit/0311e830ed8741b9b998f008df765995e3dc1cb0))
+
 ## [2.0.2](https://github.com/mac4DSTEM/macTEM/compare/v2.0.1...v2.0.2) (2026-11-12)
 
 
