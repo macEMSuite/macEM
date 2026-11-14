@@ -292,11 +292,12 @@ private nonisolated enum FFTWork {
         let profile: RadialProfile?
         let spacingX: Double, spacingY: Double
         let unitsX: String, unitsY: String
-        let source = try prepared(image, key)
+        // The region drawn beside the transform; none for the whole image as it is, so that image is widened to Float32 once (#566).
+        let source: Micrograph? = key.crop == nil && key.preprocess.isNone ? nil : try prepared(image, key)
         try Task.checkCancellation()            // the file closed: stop between stages (#618)
         do {                                    // the core's arrays go out of scope here, before the canvases exist
-            let spectrum = key.preprocess.isNone ? try PowerSpectrum.compute(image.micrograph, crop: key.crop)
-                                                 : try PowerSpectrum.compute(source, crop: nil)
+            let spectrum = key.preprocess.isNone || source == nil ? try PowerSpectrum.compute(image.micrograph, crop: key.crop)
+                                                                  : try PowerSpectrum.compute(source!, crop: nil)
             display = SpectrumDisplay.make(spectrum)
             profile = try? RadialProfile.compute(spectrum)       // the kit throws where the copy answered nil: the same refusals
             spacingX = spectrum.spacingX
@@ -310,8 +311,7 @@ private nonisolated enum FFTWork {
             unitsX: unitsX, unitsY: unitsY,
             canvas: canvas(display.values, width: display.width, height: display.height, histogram: true),
             defaultWindow: display.defaultWindow, profile: profile,
-            region: key.crop == nil && key.preprocess.isNone ? nil
-                : canvas(source.pixels, width: source.width, height: source.height, histogram: false))
+            region: source.map { canvas($0.pixels, width: $0.width, height: $0.height, histogram: false) })
     }
 
     /// The pixels the transform sees for `key`: the region, then the key's smoothing, band-pass and window.

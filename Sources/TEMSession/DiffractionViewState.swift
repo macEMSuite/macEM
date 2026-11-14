@@ -74,10 +74,10 @@ package final class DiffractionViewState {
     package func show(image: CalibratedImage, analysis: DiffractionAnalysis) async {
         analysis.bind(image)
         let centre = analysis.centre ?? .imageCentre(width: image.width, height: image.height)
-        let radius = await Self.extent(pixels: image.pixels, width: image.width, height: image.height, centre: centre)
+        let radius = await Self.extent(image, centre: centre)
         guard !Task.isCancelled else { return }
         setAutoExtent(radius)
-        let canvas = await Self.canvas(pixels: image.pixels, width: image.width, height: image.height, log: useLog)
+        let canvas = await Self.canvas(image, log: useLog)
         guard !Task.isCancelled else { return }
         // A window in log values means nothing in linear ones: the range starts whole again.
         if presentation.canvas.map({ $0.contentVersion != canvas.contentVersion }) ?? false { presentation.resetWindow() }
@@ -85,12 +85,13 @@ package final class DiffractionViewState {
     }
 
     @concurrent
-    nonisolated private static func extent(pixels: [Float], width: Int, height: Int, centre: DiffractionCentre) async -> Double? {
-        DiffractionCompute.contentRadius(pixels: pixels, width: width, height: height, centre: centre)
+    nonisolated private static func extent(_ image: CalibratedImage, centre: DiffractionCentre) async -> Double? {
+        // Float32 for this computation only, off the main actor (#566).
+        DiffractionCompute.contentRadius(pixels: image.pixels, width: image.width, height: image.height, centre: centre)
     }
 
     @concurrent
-    nonisolated private static func canvas(pixels: [Float], width: Int, height: Int, log: Bool) async -> CanvasPixels {
-        CanvasPixels.pattern(pixels: pixels, width: width, height: height, log: log)
+    nonisolated private static func canvas(_ image: CalibratedImage, log: Bool) async -> CanvasPixels {
+        CanvasPixels.pattern(pixels: image.pixels, width: image.width, height: image.height, log: log)
     }
 }

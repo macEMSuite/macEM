@@ -497,9 +497,10 @@ extension AppState {
         return (opened, canvas(for: opened), metadata, sem, databar)
     }
 
-    /// The pixels the canvas uploads, normalised over the image's finite range, and the histogram of the raw pixels.
+    /// The pixels the canvas uploads (an 8- or 16-bit image's at their own bit depth, #566), their range and the histogram of the
+    /// raw pixels.
     nonisolated static func canvas(for image: CalibratedImage) -> CanvasPixels {
-        CanvasPixels.make(width: image.width, height: image.height, pixels: image.pixels)
+        CanvasPixels.make(image: image)
     }
 
     /// "Opened Au_rings.dm4 — 2048 × 2048 px, 0.0123 nm/px" (a metre axis in nm, µm or mm: `DisplaySampling`).

@@ -50,6 +50,45 @@ nonisolated final class TIFFImageReaderTests: XCTestCase {
         XCTAssertEqual(try TIFFImageReader.read(data: tiff.build(), fileName: "be.tif").pixels, values.map(Float.init))
     }
 
+    // MARK: Bit depth (#566)
+
+    /// An 8-bit TIFF is held at one byte a pixel, a 16-bit one at two, a float one as Float32; each reads the values the
+    /// Float32 image held. Red before: every image was `[Float]`, 4 bytes a pixel.
+    func testAnImageKeepsTheBitDepthOfItsFile() throws {
+        let u8: [UInt8] = [0, 1, 127, 128, 254, 255]
+        let eight = try TIFFImageReader.read(data: TIFFBuilder(width: 3, height: 2, bits: 8, format: 1, samples: 1, bytes: u8).build(),
+                                             fileName: "u8.tif")
+        XCTAssertEqual(eight.stored, .uint8(u8))
+        XCTAssertEqual(eight.stored.bytesPerPixel, 1)
+        XCTAssertEqual(eight.pixels, u8.map(Float.init))
+        XCTAssertEqual(eight.value(at: 4), 254)
+
+        let u16: [UInt16] = [0, 1, 40_000, 65_535]
+        let sixteen = try TIFFImageReader.read(data: TIFFBuilder(width: 2, height: 2, bits: 16, format: 1, samples: 1,
+                                                                 bytes: u16.flatMap { le($0) }).build(), fileName: "u16.tif")
+        XCTAssertEqual(sixteen.stored, .uint16(u16))
+        XCTAssertEqual(sixteen.stored.bytesPerPixel, 2)
+
+        let i16: [Int16] = [-2, 7]
+        let signed = try TIFFImageReader.read(data: TIFFBuilder(width: 2, height: 1, bits: 16, format: 2, samples: 1,
+                                                                bytes: i16.flatMap { le(UInt16(bitPattern: $0)) }).build(), fileName: "i16.tif")
+        XCTAssertEqual(signed.stored, .float32([-2, 7]), "a signed image is Float32, as before")
+
+        let grey: [UInt8] = [3, 9]
+        let render = try TIFFImageReader.read(data: TIFFBuilder(width: 2, height: 1, bits: 8, format: 1, samples: 3,
+                                                                bytes: grey.flatMap { [$0, $0, $0] }).build(), fileName: "render.tif")
+        XCTAssertEqual(render.stored, .uint8(grey), "a grey render is its one byte a pixel")
+    }
+
+    /// The image is one image whatever depth it is kept at, and its rows keep the depth.
+    func testAStoredImageEqualsItsFloatImageAndCropsAtItsDepth() {
+        let stored = CalibratedImage(width: 2, height: 3, stored: .uint8([1, 2, 3, 4, 5, 6]), x: nil, y: nil, fileName: "a", source: "", voltage: nil)
+        let float = CalibratedImage(width: 2, height: 3, pixels: [1, 2, 3, 4, 5, 6], x: nil, y: nil, fileName: "a", source: "", voltage: nil)
+        XCTAssertEqual(stored, float)
+        XCTAssertEqual(stored.rows(1..<3).stored, .uint8([3, 4, 5, 6]))
+        XCTAssertEqual(stored.rows(1..<3).height, 2)
+    }
+
     // MARK: Grey renders
 
     func testAnEqualChannelRGBReadsAsOneGreyChannelLabelledARender() throws {

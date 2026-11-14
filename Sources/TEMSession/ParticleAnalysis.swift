@@ -71,8 +71,10 @@ package final class ParticleAnalysis {
         previewTask?.cancel()
         previewGeneration += 1
         let gen = previewGeneration
-        let settings = settings, pixels = image.pixels, w = image.width, h = image.height
+        let settings = settings, w = image.width, h = image.height
         let t = Task.detached(priority: .userInitiated) { [weak self] in
+            // Float32 for this computation only, made off the main actor (#566).
+            let pixels = image.pixels
             guard let range = ParticleCompute.range(pixels), let cut = try? ParticleCompute.mask(pixels: pixels, width: w, height: h, range: range, settings: settings) else { return }
             if Task.isCancelled { return }
             await self?.landPreview(cut.mask, width: w, height: h, generation: gen)
@@ -95,14 +97,14 @@ package final class ParticleAnalysis {
         let gen = runGeneration
         isComputing = true
         failure = nil
-        let settings = settings, pixels = image.pixels, w = image.width, h = image.height
+        let settings = settings, w = image.width, h = image.height
         // The density is per the scale's unit squared, and only for a calibrated image with square pixels.
         let scale = ParticleCompute.scale(of: image)
         let pixelSize = scale.isCalibrated ? scale.perPixel : nil
         let t = Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 let interval = Signposts.begin("particles.analyse"); defer { Signposts.end(interval) }
-                let report = try ParticleCompute.analyse(pixels: pixels, width: w, height: h, settings: settings, pixelSize: pixelSize)
+                let report = try ParticleCompute.analyse(pixels: image.pixels, width: w, height: h, settings: settings, pixelSize: pixelSize)
                 if Task.isCancelled { return }
                 await self?.land(report, failure: nil, generation: gen)
             } catch {

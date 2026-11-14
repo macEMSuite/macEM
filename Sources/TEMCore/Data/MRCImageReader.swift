@@ -59,7 +59,7 @@ package nonisolated enum MRCImageReader {
 
     package static func read(data: Data, fileName: String) throws -> CalibratedImage {
         do {
-            return CalibratedImage(try MRCAppImage.read(data: data, fileName: fileName))
+            return CalibratedImage(try MRCAppImage.readStored(data: data, fileName: fileName))
         } catch let error as MRCError {
             throw Refusal(error)
         }

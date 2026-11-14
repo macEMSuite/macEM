@@ -501,7 +501,8 @@ struct FFTSourceImagePane: View {
                     MetalImageView(
                         pixels: shown.values, width: shown.width, height: shown.height,
                         contentVersion: shown.contentVersion, colormap: layer.colormap,
-                        displayLo: layer.window.low, displayHi: layer.window.high, gamma: layer.gamma, pixelScale: shown.scale
+                        displayLo: layer.window.low, displayHi: layer.window.high, gamma: layer.gamma, pixelScale: shown.scale,
+                        nativePixels: shown.metalNative
                     )
                     .displayTransform(geometry.transform)
                     .frame(width: box.width, height: box.height)
