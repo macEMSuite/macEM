@@ -105,7 +105,9 @@ struct MapsRoom: View {
             case .success(let url):
                 appState.statusText = "Exported \(url.lastPathComponent)"
                 state.didWrite(to: url)
-            case .failure(let error): appState.present(error)
+            case .failure(let error):
+                state.didFinishExport()
+                appState.present(error)
             }
         }
         .accessibilityElement(children: .contain)
@@ -209,7 +211,7 @@ struct MapPane: View {
                 if let raster = session.raster, raster.rows == shape.rows, raster.columns == shape.columns {
                     if let rgba = session.rasterRGBA {
                         // An IPF or phase map: packed RGBA through the view's RGBA pipeline.
-                        MetalImageView(pixels: session.rasterPlane, width: raster.columns, height: raster.rows, contentVersion: session.rasterVersion, rgba: rgba)
+                        MetalImageView(pixels: [], width: raster.columns, height: raster.rows, contentVersion: session.rasterVersion, rgba: rgba)
                             .displayTransform(transform)
                             .frame(width: box.width, height: box.height)
                             .allowsHitTesting(false)

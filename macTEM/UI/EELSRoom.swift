@@ -137,6 +137,7 @@ struct EELSRoom: View {
                       document: EDXExportFile(data: state.exportData),
                       contentType: state.exporting?.contentType ?? .commaSeparatedText,
                       defaultFilename: (session.fileName as NSString).deletingPathExtension + (state.exporting?.suffix ?? "")) { result in
+            state.didFinishExport()
             switch result {
             case .success(let url): appState.statusText = "Exported \(url.lastPathComponent)"
             case .failure(let error): appState.present(error)

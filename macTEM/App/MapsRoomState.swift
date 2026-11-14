@@ -38,10 +38,16 @@ final class MapsRoomState {
     /// Told of every file the room writes (`AppState` keeps it in the session record for the Results room and the report).
     @ObservationIgnored var onWritten: ((SEMExportedFile) -> Void)?
 
-    /// The save panel wrote the export to `url`.
+    /// The save panel wrote the export to `url`: the record goes to the session, and the bytes go (#619).
     func didWrite(to url: URL) {
         if let pendingRecord { onWritten?(pendingRecord.written(to: url, at: Date())) }
+        didFinishExport()
+    }
+
+    /// The save panel is done, written or not: the export's bytes are let go (a map PNG can be hundreds of MB), not kept until the next one.
+    func didFinishExport() {
         pendingRecord = nil
+        exportData = Data()
     }
 
     func requestImport() { importRequest &+= 1 }

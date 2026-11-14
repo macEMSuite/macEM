@@ -189,6 +189,9 @@ nonisolated final class EELSControlsTests: XCTestCase {
         let model = try XCTUnwrap(session.model, session.failure ?? session.fitRefusal ?? "no fit")
         XCTAssertFalse(model.convolved, "Fourier-ratio divides the low loss out: no convolution")
         XCTAssertEqual(session.modelDeconvolution?.choice, .fourierRatio)
+        XCTAssertNil(session.modelDeconvolution?.coreLoss, "the fit keeps the deconvolution's words, not a second cube (#619)")
+        XCTAssertNil(session.modelDeconvolution?.lowLoss)
+        XCTAssertEqual(session.modelDeconvolution?.unavailable, d.unavailable)
         XCTAssertEqual(d.answered, kit.unavailable.map { $0 == nil })
         let fitted = try EELSFitCompute.fit(coreLoss: try kit.image.sum(mask: d.answered), edges: session.fittableEdges, microscope: Self.microscope, lowLoss: nil,
                                             edgeWindows: session.fitWindows)

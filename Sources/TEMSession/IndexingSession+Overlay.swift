@@ -56,6 +56,7 @@ extension IndexingSession {
         let memo = IndexingOverlayMemo(position: position, quaternion: solution.quaternion, phase: key, pc: pc, rows: patternShape.rows,
                                        columns: patternShape.columns, bandWidth: bandWidth, kinematical: kinematical)
         if let kept = overlayMemo, kept.key == memo { return kept.value }
+        keepOverlayCaches(minD: key.minD)
         let value: Result<KikuchiOverlay.Pattern, KikuchiOverlay.Absence>
         if let bands = overlayBandsFor(phase, key: key) {
             let detector = Self.indexedDetector(dataset.detector, rows: patternShape.rows, columns: patternShape.columns, pc: pc)
@@ -92,6 +93,20 @@ extension IndexingSession {
             self.overlayMasters[key] = made.master
             self.overlayMemo = nil
             self.overlayMastersLanded += 1
+        }
+    }
+
+    /// The master patterns held now (a test's count: they are bounded to the current Min d).
+    package var heldOverlayMasters: Int { overlayMasters.count }
+
+    /// The bands and master patterns of the current Min d only: a master made for an earlier Min d is let go (and one still being made is
+    /// cancelled), so editing Min d does not add a master pattern per value tried for the session's life (#619).
+    private func keepOverlayCaches(minD: Double) {
+        overlayMasters = overlayMasters.filter { $0.key.minD == minD }
+        overlayBands = overlayBands.filter { $0.key.minD == minD }
+        for (key, task) in overlayMasterTasks where key.minD != minD {
+            task.cancel()
+            overlayMasterTasks[key] = nil
         }
     }
 

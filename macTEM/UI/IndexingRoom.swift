@@ -116,7 +116,9 @@ struct IndexingRoom: View {
             case .success(let url):
                 appState.statusText = "Exported \(url.lastPathComponent)"
                 state.didWrite(to: url)
-            case .failure(let error): appState.present(error)
+            case .failure(let error):
+                state.didFinishExport()
+                appState.present(error)
             }
         }
         .accessibilityElement(children: .contain)
@@ -271,7 +273,8 @@ struct IndexingMapPane: View {
                         .allowsHitTesting(false)
                 } else if let rgba = session.mapRGBA, rgba.count == points * 4 {
                     // The map as packed RGBA (orix's colours, `IndexingRaster`) through the view's RGBA pipeline.
-                    MetalImageView(pixels: [Float](repeating: 0, count: points), width: dataset.scanColumns, height: dataset.scanRows,
+                    // No scalar plane: the RGBA path reads none (#619).
+                    MetalImageView(pixels: [], width: dataset.scanColumns, height: dataset.scanRows,
                                    contentVersion: session.mapVersion, rgba: rgba)
                         .displayTransform(transform)
                         .frame(width: box.width, height: box.height)
