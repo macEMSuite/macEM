@@ -293,6 +293,36 @@ nonisolated final class ParticleTests: XCTestCase {
         XCTAssertNotNil(analysis.maskPreview, "the preview lands too")
     }
 
+    /// Closing the file while Show Objects runs (#618): the run is cancelled, lands nothing and Finding… ends; nothing keeps the
+    /// image it took. Red before: `releasePixels` left the run to finish and land on a closed file.
+    @MainActor func testReleasingThePixelsCancelsARunningShowObjects() async throws {
+        let image = CalibratedImage(width: Self.width, height: Self.height, pixels: Self.planted(), x: nil, y: nil, fileName: "p.dm4", source: "", voltage: nil)
+        let analysis = ParticleAnalysis()
+        let run = analysis.analyse(image: image)
+        XCTAssertTrue(analysis.isComputing)
+        analysis.releasePixels()
+        XCTAssertFalse(analysis.isComputing, "Finding… ends with the file")
+        await run.value
+        await analysis.settled()
+        XCTAssertNil(analysis.report, "a cancelled run lands nothing")
+        XCTAssertFalse(analysis.showsObjects)
+    }
+
+    /// The compute stops between its stages once its task is cancelled. Red before: it ran to the end.
+    func testTheComputeStopsWhenItsTaskIsCancelled() async {
+        let pixels = Self.planted(), w = Self.width, h = Self.height
+        let task = Task.detached { () throws -> ParticleReport in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try ParticleCompute.analyse(pixels: pixels, width: w, height: h, settings: ParticleSettings())
+        }
+        do {
+            _ = try await task.value
+            XCTFail("a cancelled compute throws")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+    }
+
     @MainActor func testAnImageWithNothingFiniteSetsTheFailure() async {
         let image = CalibratedImage(width: 2, height: 1, pixels: [.nan, .nan], x: nil, y: nil, fileName: "n.dm4", source: "", voltage: nil)
         let analysis = ParticleAnalysis()
