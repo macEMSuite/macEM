@@ -55,8 +55,7 @@ nonisolated final class RoomReleaseTests: XCTestCase {
         try await waitUntil("the closed item to be released") { watched.value == nil }
     }
 
-    /// Red before: `releaseFiles` left the Maps room open, so a standalone map stayed for the app's life; `close` kept the property canvas
-    /// and the raster plane.
+    /// Red before: `releaseFiles` left the Maps room open, so a standalone map stayed for the app's life; `close` kept the property canvas.
     @MainActor func testAWindowClosedWithNothingToLoseClosesItsMap() async throws {
         let state = AppState(launch: LaunchOptions(arguments: []))
         await state.maps.open(url: Self.sdss).value
@@ -66,7 +65,7 @@ nonisolated final class RoomReleaseTests: XCTestCase {
         state.releaseFiles()
         XCTAssertFalse(state.maps.hasMap, "the window's map is closed with it")
         XCTAssertNil(state.maps.raster)
-        XCTAssertTrue(state.maps.rasterPlane.isEmpty, "the raster plane goes")
+        XCTAssertNil(state.maps.rasterRGBA, "the coloured raster goes")
         XCTAssertNil(presentation.canvas, "and the property canvas")
     }
 
