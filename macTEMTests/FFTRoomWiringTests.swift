@@ -471,13 +471,13 @@ nonisolated final class FFTRoomWiringTests: XCTestCase {
         XCTAssertFalse(squeezed.contains("FFTExportRow"), "the pull-down row is gone")
         XCTAssertFalse(squeezed.contains("InspectorAdaptiveMenu"), "no pull-down of actions in the inspector")
         let views: [FFTRoomSections.Section: String] = [
-            .calibration: "ImageRoomCalibrationSection(image: image)",
+            .calibration: "ImageRoomCalibrationSection(session: session)",
             .export: "FFTExportSection(analysis: analysis)",
-            .region: "FFTRegionSection(image: image, analysis: analysis)",
-            .spots: "FFTSpotsSection(image: image, analysis: analysis)",
-            .radialProfile: "FFTRadialProfileSection(image: image, analysis: analysis)",
+            .region: "FFTRegionSection(session: session, analysis: analysis)",
+            .spots: "FFTSpotsSection(session: session, analysis: analysis)",
+            .radialProfile: "FFTRadialProfileSection(session: session, analysis: analysis)",
             .maskedInverse: "FFTMaskSection(analysis: analysis)",
-            .filters: "FFTFiltersSection(image: image, analysis: analysis)",
+            .filters: "FFTFiltersSection(session: session, analysis: analysis)",
             .display: "FFTDisplaySection(analysis: analysis)",
         ]
         XCTAssertEqual(Set(views.keys), Set(FFTRoomSections.Section.allCases), "the table names every section")

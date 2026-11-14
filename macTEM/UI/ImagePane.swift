@@ -351,3 +351,9 @@ struct DatabarStrip: View, Equatable {
                        provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
     }
 }
+
+extension ImageSession {
+    /// The image a view reads through its owner, or one blank pixel once the owner has let go of it (#577): a view holds the
+    /// session, never the pixels, so a closure SwiftUI keeps after the view is gone keeps no image alive.
+    var imageOrBlank: CalibratedImage { image ?? ImagePane.blankImage }
+}

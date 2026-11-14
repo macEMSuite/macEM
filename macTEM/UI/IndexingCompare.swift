@@ -58,12 +58,11 @@ private struct IndexingCompareMaps: View {
                 let gap: CGFloat = 6
                 let tile = CGSize(width: max((geometry.size.width - gap) / 2, 0), height: geometry.size.height)
                 let box = LayoutPolicy.fitted(in: tile, aspect: CGFloat(dataset.scanColumns) / CGFloat(dataset.scanRows))
-                let pictures = session.comparePictures
                 HStack(spacing: gap) {
                     IndexingCompareTile(session: session, state: state, dataset: dataset, letter: "A", source: session.compareA,
-                                        pixels: pictures?.a, box: box, zoomModel: zoomModel, isLeading: true)
+                                        box: box, zoomModel: zoomModel, isLeading: true)
                     IndexingCompareTile(session: session, state: state, dataset: dataset, letter: "B", source: session.compareB,
-                                        pixels: pictures?.b, box: box, zoomModel: zoomModel, isLeading: false)
+                                        box: box, zoomModel: zoomModel, isLeading: false)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -80,7 +79,8 @@ private struct IndexingCompareTile: View {
     let dataset: EBSDDataset
     let letter: String
     let source: IndexingCompareSource
-    let pixels: [UInt8]?
+    /// Read from the session, never stored on the tile (#577).
+    private var pixels: [UInt8]? { isLeading ? session.comparePictures?.a : session.comparePictures?.b }
     let box: CGSize
     let zoomModel: PaneZoomModel
     let isLeading: Bool

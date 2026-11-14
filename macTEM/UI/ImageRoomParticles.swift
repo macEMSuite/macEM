@@ -21,8 +21,8 @@ import ShellEDXModel
 import ShellSpectroscopy
 
 struct ImageRoomParticlesSection: View {
-    let image: CalibratedImage
     let item: OpenItem
+    private var image: CalibratedImage { item.session.imageOrBlank }
     let rawRange: ClosedRange<Float>?
     /// The CSV the save panel writes: made when Export CSV… is pressed and dropped when the panel is done, so the body builds none.
     @State private var exportDocument: EDXExportFile?

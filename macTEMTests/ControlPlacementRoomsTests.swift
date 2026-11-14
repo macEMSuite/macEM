@@ -58,7 +58,7 @@ nonisolated final class ControlPlacementRoomsTests: XCTestCase {
     /// Red under: Display back after Rings, a hand-made Display, the View row of small buttons back.
     @MainActor func testDiffractionDisplayIsTheImageRoomsSectionAndSecond() throws {
         let source = try ui("DiffractionRoomInspector.swift")
-        XCTAssertTrue(source.contains("DiffractionCentreSection(analysis: analysis, view: view) DiffractionCalibrationSection(image: image, analysis: analysis, view: view) DiffractionDisplaySection(view: view) DiffractionToolsSection(view: view) DiffractionCrystalSection(analysis: analysis) DiffractionRingsSection(image: image, analysis: analysis, view: view) DiffractionExportSection(image: image, analysis: analysis)"))
+        XCTAssertTrue(source.contains("DiffractionCentreSection(analysis: analysis, view: view) DiffractionCalibrationSection(session: item.session, analysis: analysis, view: view) DiffractionDisplaySection(view: view) DiffractionToolsSection(view: view) DiffractionCrystalSection(analysis: analysis) DiffractionRingsSection(session: item.session, analysis: analysis, view: view) DiffractionExportSection(session: item.session, analysis: analysis)"))
         XCTAssertTrue(source.contains("ImageRoomDisplaySection(presentation: view.presentation, colormapID: \"diffraction.colormap\", logID: \"diffraction.log\", log: Binding(get: { view.useLog }, set: { view.useLog = $0 }))"))
         XCTAssertFalse(source.contains("InspectorRow(\"View\")") || source.contains(".controlSize(.small)"))
         let display = try ui("ImageRoomDisplay.swift")

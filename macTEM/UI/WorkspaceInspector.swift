@@ -71,27 +71,27 @@ private struct InspectorSettingsTab: View {
                     .environment(\.inspectorScope, "settings.results")
             }
             .environment(\.inspectorScope, "settings")
-        } else if let image = appState.imageSession.image {
+        } else if appState.imageSession.image != nil {
             InspectorScrollColumn {
                     switch appState.navigation.workspaceArea {
                     case .image:
-                        ImageRoomSettings(image: image)
+                        ImageRoomSettings(session: appState.imageSession)
                             .environment(\.inspectorScope, "settings.image")
                     case .fft:
                         if let item = appState.openItems.selected {
-                            FFTRoomSettings(image: image, item: item)
+                            FFTRoomSettings(item: item)
                                 .environment(\.inspectorScope, "settings.fft")
                         }
                     case .results:
                         if let item = appState.openItems.selected {
-                            ResultsRoomSettings(image: image, item: item)
+                            ResultsRoomSettings(item: item)
                                 .environment(\.inspectorScope, "settings.results")
                         }
                         ResultsSessionSettings()
                             .environment(\.inspectorScope, "settings.results")
                     case .diffraction:
                         if let item = appState.openItems.selected {
-                            DiffractionRoomSettings(image: image, item: item)
+                            DiffractionRoomSettings(item: item)
                                 .environment(\.inspectorScope, "settings.diffraction")
                         }
                     case .edx, .eels, .patterns, .indexing, .maps:
@@ -148,17 +148,17 @@ private struct InspectorInfoTab: View {
                 ResultsSessionInfo()
             }
             .environment(\.inspectorScope, "info")
-        } else if let image = appState.imageSession.image {
+        } else if appState.imageSession.image != nil {
             InspectorScrollColumn {
                     // The room switch: the FFT room says first what it transforms.
                     if appState.navigation.workspaceArea == .fft, let item = appState.openItems.selected {
-                        FFTRoomInfoSection(image: image, item: item)
+                        FFTRoomInfoSection(item: item)
                     }
                     // The Results room says what the selected result is, then its source image.
                     if appState.navigation.workspaceArea == .results, let item = appState.openItems.selected {
-                        ResultsRoomInfo(image: image, item: item)
+                        ResultsRoomInfo(item: item)
                     } else {
-                        ImageInfoSection(image: image, canvas: appState.presentation.canvas)
+                        ImageInfoSection(session: appState.imageSession, presentation: appState.presentation)
                     }
                     // The SEM session's selected row, under the image's (D-SEM-103).
                     if appState.navigation.workspaceArea == .results {

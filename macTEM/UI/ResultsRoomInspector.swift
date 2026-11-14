@@ -21,8 +21,8 @@ import TEMSession
 
 /// The room's Settings tab content.
 struct ResultsRoomSettings: View {
-    let image: CalibratedImage
     let item: OpenItem
+    private var image: CalibratedImage { item.session.imageOrBlank }
     @Environment(AppState.self) private var appState
 
     var body: some View {
@@ -70,8 +70,8 @@ nonisolated enum ResultsExportButton {
 
 /// The room's Info tab content: the selected result, then the image it was measured on.
 struct ResultsRoomInfo: View {
-    let image: CalibratedImage
     let item: OpenItem
+    private var image: CalibratedImage { item.session.imageOrBlank }
     @Environment(AppState.self) private var appState
 
     var body: some View {

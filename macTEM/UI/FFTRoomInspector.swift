@@ -43,7 +43,8 @@ import ImagoFilters
 
 /// The room's Settings tab: one section after another, as `ImageRoomSettings` is.
 struct FFTRoomInspectorSettings: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {
@@ -53,13 +54,13 @@ struct FFTRoomInspectorSettings: View {
         Group {
             ForEach(sections, id: \.self) { section in
                 switch section {
-                case .calibration: ImageRoomCalibrationSection(image: image)
+                case .calibration: ImageRoomCalibrationSection(session: session)
                 case .export: FFTExportSection(analysis: analysis)
-                case .region: FFTRegionSection(image: image, analysis: analysis)
-                case .spots: FFTSpotsSection(image: image, analysis: analysis)
-                case .radialProfile: FFTRadialProfileSection(image: image, analysis: analysis)
+                case .region: FFTRegionSection(session: session, analysis: analysis)
+                case .spots: FFTSpotsSection(session: session, analysis: analysis)
+                case .radialProfile: FFTRadialProfileSection(session: session, analysis: analysis)
                 case .maskedInverse: FFTMaskSection(analysis: analysis)
-                case .filters: FFTFiltersSection(image: image, analysis: analysis)
+                case .filters: FFTFiltersSection(session: session, analysis: analysis)
                 case .display: FFTDisplaySection(analysis: analysis)
                 }
             }
@@ -72,7 +73,8 @@ struct FFTRoomInspectorSettings: View {
 
 /// What is transformed, Left, Top and Size in pixels, Clear Region and Use Centred Square, Δq, and the hint.
 private struct FFTRegionSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {
@@ -270,7 +272,8 @@ private struct FFTValueRow: View {
 /// The spots measured on the transform: a list (number, d, |q|, a neighbour flag, In Mask, Remove), what they were measured on,
 /// and Measure at… for the click's twin.
 private struct FFTSpotsSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {
@@ -515,7 +518,8 @@ private struct FFTMeasureAt: View {
 
 /// The mean |F|² per |q| bin on a log axis, with the bin under the pointer read out below it.
 private struct FFTRadialProfileSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {
@@ -647,7 +651,8 @@ private struct FFTMaskSection: View {
 /// The HRTEM filters: their method note first, the seven parameters, Filter, the last run and any refusal. Collapsed
 /// until opened.
 private struct FFTFiltersSection: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
     @SceneStorage("fft.inspector.filtersExpanded") private var isExpanded = false
     @State private var parametersOpen = false
@@ -806,7 +811,8 @@ private struct FFTDisplaySection: View {
 /// The Info tab's Fourier Transform section, above the Image section: what is transformed, its size, Δq and the Nyquist frequency
 /// on each axis, and the three things a reader must know about the picture.
 struct FFTRoomInspectorInfo: View {
-    let image: CalibratedImage
+    let session: ImageSession
+    private var image: CalibratedImage { session.imageOrBlank }
     let analysis: FFTAnalysis
 
     var body: some View {

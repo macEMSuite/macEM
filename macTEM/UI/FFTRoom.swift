@@ -53,21 +53,19 @@ struct FFTRoom: View {
 
 /// The room's Settings tab content.
 struct FFTRoomSettings: View {
-    let image: CalibratedImage
     let item: OpenItem
 
     var body: some View {
-        FFTRoomInspectorSettings(image: image, analysis: item.fft)
+        FFTRoomInspectorSettings(session: item.session, analysis: item.fft)
     }
 }
 
 /// The room's section of the Info tab, above the Image section: what is transformed.
 struct FFTRoomInfoSection: View {
-    let image: CalibratedImage
     let item: OpenItem
 
     var body: some View {
-        FFTRoomInspectorInfo(image: image, analysis: item.fft)
+        FFTRoomInspectorInfo(session: item.session, analysis: item.fft)
     }
 }
 
