@@ -115,8 +115,8 @@ two fixtures may not share a name.
 
 TEMCore keeps thin seams over the kits: `CalibratedImage+Micrograph` (the kit's `Micrograph`), `KitImages`,
 `MRCImageReader`, `TIFFImageReader`, `VeloxImageReader`, `Compute/LineProfile` (the kit's `LineProfile` with the app's two refusals), `ImagePoint+PixelPoint`, `ProfileCSV`, `ResultsCSV` and `FFTExport` (the app's titles and validation sentences over the kit's CSV writers) and `UnitDisplay` (how a unit and a number are shown). A harness is an executable target in
-`Package.swift` over TEMCore, so it links the kits `Package.resolved` pins. Where a file names both TEMCore's `DiffractionPattern` and the kit's,
-`import struct DiffractoGeometry.DiffractionPattern` picks the kit's. No other name is shared: the app's twins are gone (2026-10-21).
+`Package.swift` over TEMCore, so it links the kits `Package.resolved` pins. No name is shared with a kit: the app's twins are gone
+(2026-10-21), the last of them, TEMCore's `DiffractionPattern`, with #580 (a pattern's log display is the canvas's shader transfer).
 
 **What came from mac4DSTEM** is the app entry point, the scripts and the CI workflow, adapted; each says so in its first lines. The shared
 window shell, controls, inspector kit and Metal image view are the MacEMUI package, imported, never copied.
