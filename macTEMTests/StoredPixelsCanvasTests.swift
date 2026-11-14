@@ -10,7 +10,6 @@ import ImagoCore
 import ShellMetal
 import TEMCore
 import TEMSession
-@testable import macTEM
 
 nonisolated final class StoredPixelsCanvasTests: XCTestCase {
     private static let width = 37, height = 23

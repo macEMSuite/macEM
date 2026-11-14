@@ -27,13 +27,6 @@ extension CalibratedImage {
                   fileName: image.fileName, source: image.source, voltage: nil, notes: image.notes)
     }
 
-    /// An MRC reading (voltage: an MRC image carries none).
-    package init(_ image: MRCAppImage.Image) {
-        self.init(width: image.width, height: image.height, pixels: image.pixels,
-                  x: image.x.map(AxisCalibration.init), y: image.y.map(AxisCalibration.init),
-                  fileName: image.fileName, source: image.source, voltage: nil, notes: image.notes)
-    }
-
     /// A TIFF reading at the stored bit depth (#566): the same image as `init(_: TIFFAppImage.Image)`, its pixels as the file
     /// keeps them.
     package init(_ image: TIFFAppImage.StoredImage) {
