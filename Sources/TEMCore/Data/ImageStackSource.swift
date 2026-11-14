@@ -77,13 +77,13 @@ package nonisolated final class ImageStackSource: Sendable {
                                 x: calibration(signal.axes[2]), y: calibration(signal.axes[1]), hold: hold)
     }
 
-    /// Frame `index` as macTEM's image: that page's rows only, converted to Float32.
+    /// Frame `index` as macTEM's image: that page's rows only, at the bit depth the file stores them (#566, #620): a 16-bit
+    /// frame holds two bytes a pixel, with no Float64 or Float32 copy on the way.
     package func frame(_ index: Int) throws -> CalibratedImage {
         guard index >= 0, index < frameCount else { throw FormatoReadError.unsupported("The stack has \(frameCount) frames; there is no frame \(index + 1).") }
         let slab = try signal.array.read(start: [index, 0, 0], count: [1, height, width])
         reads.add(1, ordering: .relaxed)
-        let pixels = slab.doubles().map { Float($0) }
-        return CalibratedImage(width: width, height: height, pixels: pixels, x: x, y: y, fileName: fileName,
+        return CalibratedImage(width: width, height: height, stored: StoredPixels(slab), x: x, y: y, fileName: fileName,
                                source: "frame \(index + 1) of \(frameCount)", voltage: nil, notes: ["frame \(index + 1) of \(frameCount)"])
     }
 }
