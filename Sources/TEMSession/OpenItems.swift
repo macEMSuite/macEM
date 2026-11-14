@@ -272,11 +272,13 @@ package final class OpenItem: Identifiable {
     /// The FFT room's state for this file: its region, spots and settings. Never swapped, as the marks; its
     /// products are held only while the room shows this file.
     package let fft = FFTAnalysis()
-    /// The Particles view's settings, mask preview and report for this file. Never swapped: it holds labels and numbers, no pixels.
+    /// The Particles view's settings, mask preview and report for this file. Never swapped: its one full-size array, the mask preview (a
+    /// byte a pixel), goes with the item's pixels (`releasePixels`).
     package let particles = ParticleAnalysis()
     /// The Diffraction room's centre, scale, crystal, rings and spots for this file. Never swapped: numbers and labels, no pixels.
     package let diffraction = DiffractionAnalysis()
-    /// The Diffraction room's tool, annulus, selection and zoom for this file: view state, apart from the results above.
+    /// The Diffraction room's tool, annulus, selection and zoom for this file: view state, apart from the results above. Its canvas (the
+    /// pattern as drawn, full size) goes with the item's pixels (`releasePixels`); the room builds it again when it shows the file.
     package let diffractionView = DiffractionViewState()
     /// The committed zoom and pan; kept per item, through eviction and re-read. Not observed: the pane reads it once,
     /// when it is made, and writes it at the end of every gesture — observing it would re-evaluate the pane's parent
@@ -547,12 +549,15 @@ package final class OpenItem: Identifiable {
         residency = .cold
     }
 
-    /// Lets go of every full-size array this item holds (the image, its canvas, the databar, the FFT room's copy), on the objects themselves:
-    /// a view or a control may still hold the session or the presentation after the item is closed or goes cold (#562).
+    /// Lets go of every full-size array this item holds (the image, its canvas, the databar, the FFT room's copy, the Diffraction room's
+    /// canvas, the particle mask preview), on the objects themselves: a view or a control may still hold the session, a presentation or
+    /// the particle analysis after the item is closed or goes cold (#562, #617).
     fileprivate func releasePixels() {
         session.release()
         presentation.releaseCanvas()
         fft.release()
+        diffractionView.presentation.releaseCanvas()
+        particles.releasePixels()
         databar = nil
     }
 }

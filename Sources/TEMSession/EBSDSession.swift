@@ -605,6 +605,7 @@ package final class EBSDSession {
         scanMeanBackground = nil; isComputingMean = false; meanRidesMap = false; patternIsProcessed = false; previewFailure = nil
         patternDisplay = .raw; pipeline = .roomDefault
         resetOverlay()
+        patternPresentation.releaseCanvas(); mapPresentation.releaseCanvas()
         onClose?()
     }
 

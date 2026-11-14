@@ -1,7 +1,7 @@
 //
 //  ParticleAnalysis.swift
 //  Role: the Particles view's owner for one open file (design section 4): the settings, the live mask preview, and the report of
-//        the last Show Objects. Never swapped when the item goes cold: it holds no pixels of the image, only labels and numbers.
+//        the last Show Objects. Never swapped when the item goes cold; its mask preview (a byte a pixel) goes with the item's pixels (`releasePixels`, #617).
 //
 //  Nothing here makes a number. `TEMCore/Particles/ParticleCompute` is ImagoKit's smoothing, labelling and moments with the
 //  settings; this owner decides WHEN to ask: the preview and the report each run in a detached task and land only if no newer
@@ -130,6 +130,13 @@ package final class ParticleAnalysis {
     package func reset() {
         task?.cancel(); previewTask?.cancel(); runGeneration += 1; previewGeneration += 1
         report = nil; maskPreview = nil; failure = nil; isComputing = false; showsObjects = false; selectedLabel = nil
+    }
+
+    /// The item's pixels go (closed, or gone cold): the mask preview with them, and a preview being computed lands nothing. The report
+    /// stays (numbers and outlines for the same file); the switch stays, so the preview is made again when the image is back.
+    package func releasePixels() {
+        previewTask?.cancel(); previewTask = nil; previewGeneration += 1
+        maskPreview = nil
     }
 
     /// Returns when no run is in flight.
