@@ -58,7 +58,8 @@ nonisolated final class ImageStackTests: XCTestCase {
     // MARK: Reading
 
     /// A stack opens with its frame count, size and no pixels read; frame N is that page's pixels exactly and is the only frame read.
-    /// Red under: frames transposed; every frame read at the open; a frame off by one.
+    /// Red under: frames transposed; every frame read at the open; a frame off by one; a
+    /// 16-bit frame widened to Float32.
     func testAStackShowsFrameNHavingReadOnlyThatFrame() throws {
         let url = try Self.tempStack(frames: 12)
         let stack = try XCTUnwrap(try ImageStackSource.open(path: url.path))
@@ -68,6 +69,7 @@ nonisolated final class ImageStackTests: XCTestCase {
         XCTAssertEqual(stack.framesRead, 1)
         XCTAssertEqual(frame.width, 64); XCTAssertEqual(frame.height, 48)
         XCTAssertEqual(frame.source, "frame 8 of 12")
+        guard case .uint16 = frame.stored else { return XCTFail("a 16-bit frame keeps its stored depth (#620)") }
         for (x, y) in [(0, 0), (63, 47), (10, 20), (33, 5)] { XCTAssertEqual(frame.pixels[y * 64 + x], Float(Self.planted(frame: 7, x: x, y: y)), "(\(x), \(y))") }
         XCTAssertThrowsError(try stack.frame(12)); XCTAssertThrowsError(try stack.frame(-1))
         XCTAssertEqual(stack.framesRead, 1, "a refused frame reads nothing")
