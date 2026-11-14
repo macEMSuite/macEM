@@ -205,8 +205,8 @@ table eXSpy uses, values unchanged (SpectroKit's NOTICE). Its eXSpy/HyperSpy and
 FormatoKit (a Swift package the app is built with)
 ================================================================================
 
-The app links FormatoKit (https://github.com/mac4DSTEM/FormatoKit, tag 0.16.0, commit
-e42bba73f07b39fc79e91352267798e2cbfe56a5), Copyright (C) 2026 Paul Lobpreis, GPL-3.0-only, for its DM3/DM4, Velox EMD, TIFF
+The app links FormatoKit (https://github.com/mac4DSTEM/FormatoKit, tag 0.16.1, commit
+c35ff41887ff9a99188b574883c0608ea63a35c8), Copyright (C) 2026 Paul Lobpreis, GPL-3.0-only, for its DM3/DM4, Velox EMD, TIFF
 and MRC readers and its HDF5 layer, which SpectroKit held until 0.4.0, including the root-attribute file layer
 (`HDF5RootAttributes`) the session sidecar is written and read through since FormatoKit 0.5.0: it was this app's own HDF5 binding (an adapted
 copy of mac4DSTEM's BraggVectorEMDWriter binding), moved into the kit, and the app no longer carries a copy. Its own third-party notices

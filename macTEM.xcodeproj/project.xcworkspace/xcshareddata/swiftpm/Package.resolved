@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mac4DSTEM/FormatoKit",
       "state" : {
-        "revision" : "e42bba73f07b39fc79e91352267798e2cbfe56a5",
-        "version" : "0.16.0"
+        "revision" : "c35ff41887ff9a99188b574883c0608ea63a35c8",
+        "version" : "0.16.1"
       }
     },
     {
