@@ -616,6 +616,58 @@ nonisolated final class FFTAnalysisTests: XCTestCase {
         try await waitUntil("job 1 lands", seconds: 8) { rig.owner.isSpectrumCurrent }
     }
 
+    /// Closing the file (`release`) cancels the job running in each lane, so the image it holds goes without waiting for the job to end
+    /// (#618). The jobs here hold the image until they are cancelled and never end on their own. Red before: the lanes' and the spot
+    /// lane's tasks were not stored, so nothing cancelled them and the jobs ran on.
+    @MainActor func testReleaseCancelsTheRunningJobs() async throws {
+        let ended = FFTJobEnds()
+        @Sendable func holding(_ image: CalibratedImage, _ name: String) async throws {
+            defer { Task { await ended.add(name) } }
+            while true {
+                _ = image.width                                   // the job keeps its image while it runs
+                try await Task.sleep(for: .milliseconds(5))       // throws once the task is cancelled
+            }
+        }
+        let owner = FFTAnalysis(compute: FFTCompute(
+            spectrum: { image, key in
+                if key.contentVersion == 1 { return Self.fakeSpectrum(key, size: 64) }
+                try await holding(image, "spectrum"); throw CancellationError()
+            },
+            spot: { image, _, _, _ in try? await holding(image, "spot"); return .measuring },
+            maskedInverse: { image, _ in try await holding(image, "mask"); throw CancellationError() },
+            filter: { image, _ in try await holding(image, "filter"); throw CancellationError() }))
+        owner.setRegion(Self.regionA, committed: true)
+        owner.show(Self.plant(), contentVersion: 1)
+        try await waitUntil("the spectrum lands", seconds: 8) { owner.isSpectrumCurrent }
+        owner.measureSpot(row: 37, col: 40)
+        owner.runFilter()
+        owner.show(Self.plant(), contentVersion: 2)           // new pixels: a spectrum job that holds them
+        try await settle()
+        owner.release()
+        try await waitUntil("every running job to stop", seconds: 8) {
+            Set(await ended.names).isSuperset(of: ["spectrum", "spot", "filter"])
+        }
+    }
+
+    /// The live work stops at its next stage once its task is cancelled. Red before: no stage checked for cancellation.
+    func testTheLiveWorkStopsWhenCancelled() async throws {
+        let image = Self.plant()
+        let key = FFTSpectrumKey(contentVersion: 5, crop: Self.regionA)
+        let task = Task.detached { () -> (Bool, Bool) in
+            withUnsafeCurrentTask { $0?.cancel() }
+            let spectrum: Bool
+            do { _ = try await FFTCompute.live.spectrum(image, key); spectrum = false } catch is CancellationError { spectrum = true }
+            let filter: Bool
+            do {
+                _ = try await FFTCompute.live.filter(image, FFTFilterKey(spectrum: key, parameters: .defaults)); filter = false
+            } catch is CancellationError { filter = true }
+            return (spectrum, filter)
+        }
+        let (spectrum, filter) = try await task.value
+        XCTAssertTrue(spectrum, "the spectrum stops with a cancellation")
+        XCTAssertTrue(filter, "and the filter")
+    }
+
     // MARK: - The masked inverse
 
     /// The masked inverse is wanted only while the pane shows it, and only from the spots measured on the spectrum shown
@@ -1209,4 +1261,10 @@ nonisolated final class FFTAnalysisTests: XCTestCase {
         XCTAssertNil(without[spots[2].id], "the first measured spot is the reference now")
         XCTAssertEqual(without[spots[4].id]?.reference, 3)
     }
+}
+
+/// The names of the jobs that have ended (`testReleaseCancelsTheRunningJobs`).
+private actor FFTJobEnds {
+    var names: [String] = []
+    func add(_ name: String) { names.append(name) }
 }
