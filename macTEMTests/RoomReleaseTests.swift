@@ -35,15 +35,18 @@ nonisolated final class RoomReleaseTests: XCTestCase {
     @MainActor func testClosingAFileLetsGoOfItsDiffractionCanvasAndParticleMask() async throws {
         let state = AppState(launch: LaunchOptions(arguments: []))
         await state.open(urls: [try plantedCopy()])?.value
-        let item = try XCTUnwrap(state.openItems.selected)
-        let image = try XCTUnwrap(item.session.image)
-        let view = item.diffractionView, particles = item.particles
-        await view.show(image: image, analysis: item.diffraction)
-        particles.setPreviewsMask(true)
-        await particles.updatePreview(image: image)?.value
+        // The item is held only inside this scope: the test's own reference must not keep it alive past the close.
+        let (view, particles, watched) = try await { @MainActor () async throws -> (DiffractionViewState, ParticleAnalysis, Weak<OpenItem>) in
+            let item = try XCTUnwrap(state.openItems.selected)
+            let image = try XCTUnwrap(item.session.image)
+            let view = item.diffractionView, particles = item.particles
+            await view.show(image: image, analysis: item.diffraction)
+            particles.setPreviewsMask(true)
+            await particles.updatePreview(image: image)?.value
+            return (view, particles, Weak(item))
+        }()
         XCTAssertNotNil(view.presentation.canvas, "the room drew the pattern")
         XCTAssertNotNil(particles.maskPreview, "the preview was made")
-        let watched = Weak(item)
 
         state.openItems.closeSelected()
         await state.openItems.settled()
