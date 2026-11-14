@@ -16,4 +16,14 @@ extension IntensityHistogram {
     package nonisolated static func compute(_ pixels: [Float]) -> IntensityHistogram? {
         compute(pixels, bins: binCount)
     }
+
+    /// The histogram of an 8-bit image's stored values (ImagoKit's `compute(stored:bins:range:)`, no Float32 copy).
+    package nonisolated static func compute(stored pixels: [UInt8]) -> IntensityHistogram? {
+        compute(stored: pixels, bins: binCount)
+    }
+
+    /// The histogram of a 16-bit image's stored values.
+    package nonisolated static func compute(stored pixels: [UInt16]) -> IntensityHistogram? {
+        compute(stored: pixels, bins: binCount)
+    }
 }

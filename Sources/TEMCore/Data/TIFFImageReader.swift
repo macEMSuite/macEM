@@ -110,13 +110,14 @@ package nonisolated enum TIFFImageReader {
         guard rgb.dataType == .rgb8, rgb.shape == [calibrated.height, calibrated.width], rgb.bytes.count == 3 * count else {
             throw Refusal.unequalChannels(row: 0, column: 0)
         }
-        var pixels = [Float](repeating: 0, count: count)
+        // The brightest of three bytes is a byte: the render stays one byte a pixel (#566).
+        var pixels = [UInt8](repeating: 0, count: count)
         rgb.bytes.withUnsafeBytes { (p: UnsafeRawBufferPointer) in
-            for i in 0..<count { pixels[i] = Float(max(p[3 * i], p[3 * i + 1], p[3 * i + 2])) }
+            for i in 0..<count { pixels[i] = max(p[3 * i], p[3 * i + 1], p[3 * i + 2]) }
         }
         let notes = calibrated.notes.filter { $0 != Note.render } + [Note.colourRender]
         let axes = CalibratedImage(calibrated)   // the kit's calibration, as every TIFF reading gets it
-        return CalibratedImage(width: calibrated.width, height: calibrated.height, pixels: pixels,
+        return CalibratedImage(width: calibrated.width, height: calibrated.height, stored: .uint8(pixels),
                                x: axes.x, y: axes.y,
                                fileName: calibrated.fileName,
                                source: calibrated.source.replacingOccurrences(of: Note.render, with: "colour render shown as grey, not counts"),
@@ -125,7 +126,7 @@ package nonisolated enum TIFFImageReader {
 
     package static func read(data: Data, fileName: String) throws -> CalibratedImage {
         do {
-            return CalibratedImage(try TIFFAppImage.read(data: data, fileName: fileName))
+            return CalibratedImage(try TIFFAppImage.readStored(data: data, fileName: fileName))
         } catch let refusal as TIFFAppImage.Refusal {
             throw Refusal(refusal)
         }

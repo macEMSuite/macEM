@@ -15,9 +15,7 @@ nonisolated extension SEMImageMetadata {
     package func calibrated(_ image: CalibratedImage) -> CalibratedImage {
         guard image.x?.isCalibrated != true, image.y?.isCalibrated != true,
               let sx = pixelSizeX, let sy = pixelSizeY, sx > 0, sy > 0, sx.isFinite, sy.isFinite else { return image }
-        return CalibratedImage(width: image.width, height: image.height, pixels: image.pixels,
-                               x: AxisCalibration(scale: sx, unit: "m"), y: AxisCalibration(scale: sy, unit: "m"),
-                               fileName: image.fileName, source: image.source, voltage: image.voltage, notes: image.notes)
+        return image.withAxes(x: AxisCalibration(scale: sx, unit: "m"), y: AxisCalibration(scale: sy, unit: "m"))
     }
 
     /// `image` without its last `databarRows` rows; `image` itself when the record names no databar or the rows do not fit
@@ -25,9 +23,7 @@ nonisolated extension SEMImageMetadata {
     package func cropped(_ image: CalibratedImage) -> CalibratedImage {
         guard let rows = databarRows, rows > 0, image.height == imageHeight, image.height - rows > 0 else { return image }
         let keep = image.height - rows
-        return CalibratedImage(width: image.width, height: keep, pixels: Array(image.pixels[0..<(image.width * keep)]),
-                               x: image.x, y: image.y, fileName: image.fileName, source: image.source, voltage: image.voltage,
-                               notes: image.notes)
+        return image.rows(0..<keep)
     }
 
     /// The rows `cropped` cuts off `image`, as an image of their own (the image's width, `databarRows` rows, its axes): the
@@ -35,9 +31,7 @@ nonisolated extension SEMImageMetadata {
     package func databar(of image: CalibratedImage) -> CalibratedImage? {
         guard let rows = databarRows, rows > 0, image.height == imageHeight, image.height - rows > 0 else { return nil }
         let keep = image.height - rows
-        return CalibratedImage(width: image.width, height: rows, pixels: Array(image.pixels[(image.width * keep)...]),
-                               x: image.x, y: image.y, fileName: image.fileName, source: image.source, voltage: image.voltage,
-                               notes: image.notes)
+        return image.rows(keep..<image.height)
     }
 
     /// Both, in the order the app applies them: the axes, then the crop when `cropDatabar`.

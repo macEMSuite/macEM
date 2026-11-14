@@ -88,7 +88,7 @@ package nonisolated enum ImageOpening {
         guard let object = primaryImageObject(in: objects) else {
             throw Refusal.noImage(file: formatoDisplayFileName(path), objects: describe(objects))
         }
-        return calibratedImage(try DM4Experiment.readImage(path: path, index: object.index),
+        return calibratedImage(try DM4Experiment.readStoredImage(path: path, index: object.index),
                                fileName: formatoDisplayFileName(path))
     }
 
@@ -127,14 +127,26 @@ package nonisolated enum ImageOpening {
 
     /// A `DM4Image` as macTEM's image; the axes are carried over unchanged.
     package static func calibratedImage(_ image: DM4Image, fileName: String) -> CalibratedImage {
+        calibratedImage(width: image.width, height: image.height, stored: .float32(image.pixels), object: image.object,
+                        xAxis: image.xAxis, yAxis: image.yAxis, fileName: fileName)
+    }
+
+    /// A DM image at its stored bit depth (#566), as `calibratedImage(_: DM4Image, fileName:)` reads it otherwise.
+    package static func calibratedImage(_ image: DM4StoredImage, fileName: String) -> CalibratedImage {
+        calibratedImage(width: image.width, height: image.height, stored: StoredPixels(image.pixels), object: image.object,
+                        xAxis: image.xAxis, yAxis: image.yAxis, fileName: fileName)
+    }
+
+    private static func calibratedImage(width: Int, height: Int, stored: StoredPixels, object: DM4ImageObject,
+                                        xAxis: DM4Axis?, yAxis: DM4Axis?, fileName: String) -> CalibratedImage {
         func axis(_ a: DM4Axis?) -> AxisCalibration? {
             a.map { AxisCalibration(scale: $0.scale, unit: $0.units, origin: $0.origin) }
         }
-        let name = image.object.name.isEmpty ? "" : " · \(image.object.name)"
-        return CalibratedImage(width: image.width, height: image.height, pixels: image.pixels,
-                               x: axis(image.xAxis), y: axis(image.yAxis), fileName: fileName,
-                               source: "ImageList.\(image.object.index)\(name)",
-                               voltage: image.object.voltage)
+        let name = object.name.isEmpty ? "" : " · \(object.name)"
+        return CalibratedImage(width: width, height: height, stored: stored,
+                               x: axis(xAxis), y: axis(yAxis), fileName: fileName,
+                               source: "ImageList.\(object.index)\(name)",
+                               voltage: object.voltage)
     }
 
     /// What a refused file holds, in words for the message (#532): "an image stack of 3 frames of 2020 × 2020 and 3 profiles of

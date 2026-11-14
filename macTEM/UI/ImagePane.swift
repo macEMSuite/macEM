@@ -201,7 +201,8 @@ struct ImagePane: View {
                     colormap: item.presentation.colormap,
                     displayLo: item.presentation.displayFractions.low,
                     displayHi: item.presentation.displayFractions.high,
-                    gamma: Float(item.presentation.gamma), pixelScale: canvas.scale
+                    gamma: Float(item.presentation.gamma), pixelScale: canvas.scale,
+                    nativePixels: canvas.metalNative
                 )
                 .displayTransform(MetalDisplayTransform(
                     paneSize: box, imageBox: box,
@@ -272,7 +273,7 @@ nonisolated enum ImageReadout {
     static func text(_ image: CalibratedImage, at q: ImagePoint) -> String? {
         let c = Int(q.x.rounded()), r = Int(q.y.rounded())
         guard c >= 0, c < image.width, r >= 0, r < image.height else { return nil }
-        return "x \(c), y \(r) · \(Num.sig(Double(image.pixels[r * image.width + c]), 5))"
+        return "x \(c), y \(r) · \(Num.sig(Double(image.value(at: r * image.width + c)), 5))"
     }
 
     /// The pixel readout, then the found object under the pointer when there is one: "x 30, y 30 · 100 · object 2: 15.9 × 6.1 nm", its

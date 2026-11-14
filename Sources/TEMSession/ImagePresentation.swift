@@ -26,7 +26,11 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
     package let width: Int
     package let height: Int
     /// The pixels the view draws, as `scale` says: display values in [0, 1] (masked < 0), or the raw values over `rawRange`.
+    /// Empty when `native` holds them.
     package let values: [Float]
+    /// The raw pixels of an 8- or 16-bit image at their own bit depth, shared with the image (#566): drawn in place of `values`
+    /// (`metalNative`), one or two bytes a pixel in the app and on the GPU. nil for every other canvas.
+    package let native: StoredPixels?
     package let scale: MetalImageView.PixelScale
     /// Changes exactly when the drawn pixels do (`MetalImageView.contentVersion`); the view re-uploads on it.
     package let contentVersion: Int
@@ -44,11 +48,12 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
                   rawRange: rawRange, histogram: histogram)
     }
 
-    private init(width: Int, height: Int, values: [Float], scale: MetalImageView.PixelScale, contentVersion: Int,
-                 rawRange: ClosedRange<Float>?, histogram: IntensityHistogram?) {
+    private init(width: Int, height: Int, values: [Float], native: StoredPixels? = nil, scale: MetalImageView.PixelScale,
+                 contentVersion: Int, rawRange: ClosedRange<Float>?, histogram: IntensityHistogram?) {
         self.width = width
         self.height = height
         self.values = values
+        self.native = native
         self.scale = scale
         self.contentVersion = contentVersion
         self.rawRange = rawRange
@@ -67,10 +72,53 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
                             rawRange: range, histogram: IntensityHistogram.compute(pixels))
     }
 
+    /// The canvas of an image: its raw pixels at their own bit depth for an 8- or 16-bit image (`native`; their range, the
+    /// histogram of the stored values and a version hashed from their bytes), else `make(width:height:pixels:)` of its Float32
+    /// pixels. Off the main actor (`AppState.canvas(for:)`).
+    package static func make(image: CalibratedImage) -> CanvasPixels {
+        let w = image.width, h = image.height
+        switch image.stored {
+        case .uint8(let v):
+            let range = Float(v.min() ?? 0)...Float(v.max() ?? 0)
+            return CanvasPixels(width: w, height: h, values: [], native: image.stored, scale: .raw(range: range),
+                                contentVersion: nativeVersion(v, width: w, height: h), rawRange: range,
+                                histogram: IntensityHistogram.compute(stored: v))
+        case .uint16(let v):
+            let range = Float(v.min() ?? 0)...Float(v.max() ?? 0)
+            return CanvasPixels(width: w, height: h, values: [], native: image.stored, scale: .raw(range: range),
+                                contentVersion: nativeVersion(v, width: w, height: h), rawRange: range,
+                                histogram: IntensityHistogram.compute(stored: v))
+        case .float32(let v):
+            return make(width: w, height: h, pixels: v)
+        }
+    }
+
+    /// FNV-1a over the stored bytes and the size: changes when the pixels do, as `MetalImageView.contentVersion` does for Float32.
+    private static func nativeVersion<T>(_ values: [T], width: Int, height: Int) -> Int {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for v in [UInt64(width), UInt64(height), UInt64(MemoryLayout<T>.size)] { hash = (hash ^ v) &* 0x0000_0100_0000_01b3 }
+        values.withUnsafeBytes { bytes in
+            for byte in bytes { hash = (hash ^ UInt64(byte)) &* 0x0000_0100_0000_01b3 }
+        }
+        return Int(bitPattern: UInt(truncatingIfNeeded: hash))
+    }
+
+    /// The pixels the view takes at their own bit depth (`MetalImageView.nativePixels`), nil unless `native`.
+    package var metalNative: MetalImageView.NativePixels? {
+        switch native {
+        case .uint8(let v): .uint8(v)
+        case .uint16(let v): .uint16(v)
+        default: nil
+        }
+    }
+
+    /// Pixels in the canvas.
+    package var count: Int { native?.count ?? values.count }
+
     /// The display value of pixel `index` (row-major): what the view draws there, [0, 1] or the masked sentinel. Value for
     /// value `DisplayNormalization.normalized` for a raw canvas.
     package func normalizedValue(at index: Int) -> Float {
-        let v = values[index]
+        let v = native?[index] ?? values[index]
         guard case .raw(let range) = scale else { return v }
         guard let range, v.isFinite else { return FloatImage.invalidDisplayValue }
         let span = range.upperBound - range.lowerBound
@@ -80,14 +128,14 @@ package nonisolated struct CanvasPixels: Sendable, Equatable {
     /// Every display value, row-major. A raw canvas builds them, a full-size copy: for a one-off only (an export).
     package var normalized: [Float] {
         guard case .raw = scale else { return values }
-        return (0..<values.count).map(normalizedValue(at:))
+        return (0..<count).map(normalizedValue(at:))
     }
 
     /// The sidebar thumbnail: `Thumbnail.make` of the display values, without the full-size copy for a raw canvas (each
     /// box sums the same display values in the same order, so it is the same thumbnail, value for value).
     package func thumbnail(maxSide: Int = Thumbnail.defaultMaxSide) -> Thumbnail? {
         guard case .raw = scale else { return Thumbnail.make(normalized: values, width: width, height: height, maxSide: maxSide) }
-        guard width >= 1, height >= 1, maxSide >= 1, values.count == width * height else { return nil }
+        guard width >= 1, height >= 1, maxSide >= 1, count == width * height else { return nil }
         let long = max(width, height)
         if long <= maxSide { return Thumbnail(width: width, height: height, normalized: normalized) }
         func scaled(_ side: Int) -> Int {
@@ -153,7 +201,7 @@ package nonisolated enum DisplayWindow {
     /// default window of a map that opens on its 1st to 99th percentile (control placement §11). Read from the normalised pixels on at
     /// most `sampleCap` of them, evenly strided (a display default, never a number). Nil with fewer than two finite pixels or no span.
     package static func quantileWindow(of canvas: CanvasPixels, _ quantiles: ClosedRange<Double>, sampleCap: Int = 1 << 16) -> ClosedRange<Float>? {
-        let count = canvas.values.count
+        let count = canvas.count
         guard let raw = canvas.rawRange, raw.upperBound > raw.lowerBound, count > 0 else { return nil }
         let stride = max(1, count / max(sampleCap, 2))
         var sample: [Float] = []
