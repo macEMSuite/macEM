@@ -59,10 +59,20 @@ package nonisolated enum PoleFigures {
         orientations.quaternions.map { Rotation($0) * sampleDirection }
     }
 
-    /// The pole figure of one family: orix's `pole_density_function` of the sample directions on a hemisphere.
+    /// The pole figure of one family: orix's `pole_density_function` of the sample directions on a hemisphere. The directions are
+    /// binned as they are made, not held (N × |poles| vectors, #621): the same counts as `PoleDensityFunction.counts` of
+    /// `sampleDirections`, in the same order, each bin a sum of ones.
     package static func poleFigure(_ orientations: Orientations, poles: [SIMD3<Double>], resolution: Double = 1, sigma: Double = 5,
                                    hemisphere: EqualAreaGrid.Hemisphere = .upper) -> PoleDensityMap {
-        PoleDensityFunction.compute(sampleDirections(orientations, poles: poles), resolution: resolution, sigma: sigma, hemisphere: hemisphere)
+        let grid = EqualAreaGrid(resolution: resolution, hemisphere: hemisphere)
+        var counts = [Double](repeating: 0, count: grid.binCount)
+        for q in orientations.quaternions {
+            let inverse = Rotation(q).inverse
+            for p in poles {
+                if let k = grid.bin(of: inverse * p) { counts[k] += 1 }
+            }
+        }
+        return PoleDensityFunction.density(counts: counts, resolution: resolution, sigma: sigma, hemisphere: hemisphere)
     }
 
     /// The inverse pole figure density of one sample direction in `laue`'s fundamental sector.
