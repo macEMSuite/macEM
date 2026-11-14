@@ -30,6 +30,30 @@ package nonisolated enum OrientationSampling {
         case resolutionOutOfRange(Double)
         /// The grid width is not a positive angle.
         case gridWidthOutOfRange(Double)
+        /// The sample would hold more than `maximumRotations` (about `estimated`): a finer step than `resolution` allows for the group.
+        case tooManyRotations(estimated: Int, resolution: Double)
+
+        /// What to change, in the room's words.
+        package var sentence: String {
+            switch self {
+            case .resolutionOutOfRange(let r): "No grid has an angular resolution of \(r)°."
+            case .gridWidthOutOfRange(let w): "The grid width must be a positive angle, not \(w)°."
+            case .tooManyRotations(let n, let r):
+                "A \(r)° sample of this symmetry holds about \(n) orientations, more than \(OrientationSampling.maximumRotations); choose a coarser step."
+            }
+        }
+    }
+
+    /// The most rotations a fundamental-zone sample may hold: 5 million (160 MB of quaternions, and the dictionary simulated from it is
+    /// far larger). A triclinic phase at 1° would be about 2 × 10⁷ (#621); m-3m at 1° is about 0.86 million.
+    package static let maximumRotations = 5_000_000
+
+    /// About how many rotations `fundamental(resolution:pointGroup:)` keeps: the (2N)³ grid over the proper group's order (its share
+    /// of orientation space), before the grid is walked.
+    package static func estimatedFundamentalCount(resolution: Double, pointGroup: PointGroup) throws -> Int {
+        let n = try semiEdgeSteps(resolution: resolution)
+        let grid = Double(2 * n) * Double(2 * n) * Double(2 * n)
+        return Int((grid / Double(max(1, pointGroup.properSubgroup.order))).rounded())
     }
 
     /// The semi-edge of the cubochoric cube, π^(2/3) / 2.
@@ -57,6 +81,8 @@ package nonisolated enum OrientationSampling {
     package static func fundamental(resolution: Double, pointGroup: PointGroup,
                                     isCancelled: @Sendable () -> Bool = { false }) throws -> [Rotation] {
         let n = try semiEdgeSteps(resolution: resolution)
+        let estimated = try estimatedFundamentalCount(resolution: resolution, pointGroup: pointGroup)
+        guard estimated <= maximumRotations else { throw Error.tooManyRotations(estimated: estimated, resolution: resolution) }
         let region = try OrientationRegion.fromSymmetry(pointGroup)
         let inside = grid(semiEdgeSteps: n, keep: { region.contains($0) }, isCancelled: isCancelled)
         // A walk stopped part way holds only the slabs walked before: thrown away, never taken for the sample.

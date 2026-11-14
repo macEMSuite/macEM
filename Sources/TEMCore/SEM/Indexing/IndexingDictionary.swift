@@ -80,6 +80,25 @@ package nonisolated struct DictionaryIndexingSettings: Sendable, Equatable, Coda
     package static let resolutionRange = 1.0...15.0
     package static let keepRange = 1...50
 
+    /// What a kept match costs in the result: its score, its simulation index and its rotation (8 + 8 + 32 bytes).
+    package static let bytesPerKeptMatch = 48
+    /// The most the kept matches of one phase's run may hold: 1 GiB, which keeps kikuchipy's default of 20 matches (`keep_n=20`) on a
+    /// scan of a million points; more would cost GBs for as long as the result is shown (#621: 50 matches at 1 M points is 2.4 GB).
+    package static let keptMatchesBudget = 1 << 30
+
+    /// The most matches a scan of `points` points may keep within `keptMatchesBudget`.
+    package static func mostKept(points: Int) -> Int {
+        max(1, keptMatchesBudget / max(1, points * bytesPerKeptMatch))
+    }
+
+    /// Why these settings keep too many matches for a scan of `points` points, with what to change; nil when they fit.
+    package func keptMatchesRefusal(points: Int) -> String? {
+        let most = Self.mostKept(points: points)
+        guard keep > most else { return nil }
+        let gb = Double(points) * Double(keep) * Double(Self.bytesPerKeptMatch) / 1e9
+        return "Keeping \(keep) matches at each of \(points) points needs \(String(format: "%.1f", gb)) GB; keep at most \(most)."
+    }
+
     /// Why these settings cannot run, in the room's words; nil when they can.
     package var refusal: String? {
         guard resolution.isFinite, Self.resolutionRange.contains(resolution) else { return "The angular resolution runs from 1° to 15°." }
@@ -263,7 +282,8 @@ package nonisolated struct DictionaryIndexingPlan: Sendable {
     @concurrent package static func sample(resolution: Double, pointGroup: PointGroup) async throws -> [SIMD4<Double>] {
         do {
             return try await OrientationSampling.fundamentalSample(resolution: resolution, pointGroup: pointGroup).map(\.q)
-        } catch is OrientationSampling.Error {
+        } catch let error as OrientationSampling.Error {
+            if case .tooManyRotations = error { throw IndexingRefusal(error.sentence) }
             throw IndexingRefusal("The orientations cannot be sampled at \(resolution)°.")
         }
     }
@@ -294,6 +314,7 @@ package nonisolated struct DictionaryIndexingPlan: Sendable {
             throw IndexingRefusal("The file states no projection centre, which dictionary indexing needs.")
         }
         guard !rotations.isEmpty else { throw IndexingRefusal("The dictionary holds no orientation.") }
+        if let why = settings.keptMatchesRefusal(points: source.scanRows * source.scanColumns) { throw IndexingRefusal(why) }
         guard case .success(let energy) = Self.energy(master: master.master, beamEnergy: beamEnergy) else {
             throw IndexingRefusal("The master pattern holds no energy for the scan.")
         }
